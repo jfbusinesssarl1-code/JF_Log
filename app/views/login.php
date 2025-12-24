@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Comptabilité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-light min-vh-100 d-flex align-items-center"
+    style="background: linear-gradient(135deg,#f8fafc,#e2e8f0);">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow rounded-4 border-0">
+                    <div class="card-header text-center bg-white border-0 py-3">
+                        <h4 class="mb-0 fw-bold text-secondary">Connexion</h4>
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($error)): ?>
+                            <div class="alert alert-danger text-center shadow-sm"><?= htmlspecialchars($error) ?></div>
+                        <?php endif; ?>
+
+                        <div class="alert alert-info mb-3" style="font-size: 0.9rem;">
+                            <strong>🔒 Première utilisation ?</strong><br>
+                            Exécutez <code>php init.php</code> pour créer le compte administrateur.
+                        </div>
+
+                        <form method="post" onsubmit="return validateLoginForm();" novalidate>
+                            <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Nom d'utilisateur</label>
+                                <input type="text" class="form-control form-control-lg" id="username" name="username"
+                                    required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_]+"
+                                    placeholder="ex: jdoe">
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Mot de passe</label>
+                                <input type="password" class="form-control form-control-lg" id="password"
+                                    name="password" required minlength="6" placeholder="••••••••">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Se connecter</button>
+                        </form>
+                        <div class="text-center mt-3">
+                            <a class="text-decoration-none" href="?page=signup">Créer un compte</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    function validateLoginForm() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        let errors = [];
+        if (username.length < 3 || username.length > 32 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+            errors.push("Nom d'utilisateur invalide");
+        }
+        if (password.length < 6) {
+            errors.push("Mot de passe trop court");
+        }
+        if (errors.length) {
+            alert(errors.join('\n'));
+            return false;
+        }
+        return true;
+    }
+</script>
+
+</html>
