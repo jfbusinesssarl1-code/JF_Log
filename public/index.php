@@ -13,6 +13,17 @@ if (file_exists(filename: $autoload)) {
 $page = $_GET['page'] ?? 'login';
 $action = $_GET['action'] ?? '';
 
+// Routes API
+if ($page === 'api') {
+    $apiAction = $_GET['action'] ?? '';
+    $apiController = new App\Controllers\ApiController();
+
+    if ($apiAction === 'comptes') {
+        $apiController->getComptes();
+    }
+    exit;
+}
+
 switch ($page) {
     case 'stock':
         $controller = new App\Controllers\StockController();
@@ -22,6 +33,8 @@ switch ($page) {
             $controller->edit();
         } elseif ($action === 'delete') {
             $controller->delete();
+        } elseif ($action === 'export') {
+            $controller->export();
         } else {
             $controller->index();
         }
@@ -33,7 +46,12 @@ switch ($page) {
         (new App\Controllers\SignupController())->index();
         break;
     case 'dashboard':
-        (new App\Controllers\DashboardController())->index();
+        $controller = new App\Controllers\DashboardController();
+        if ($action === 'export') {
+            $controller->export();
+        } else {
+            $controller->index();
+        }
         break;
     case 'register':
         (new App\Controllers\RegisterController())->index();
@@ -63,6 +81,8 @@ switch ($page) {
             $controller->edit();
         } elseif ($action === 'delete') {
             $controller->delete();
+        } elseif ($action === 'export') {
+            $controller->export();
         } else {
             $controller->index();
         }
@@ -73,15 +93,27 @@ switch ($page) {
             $controller->edit();
         } elseif ($action === 'delete') {
             $controller->delete();
+        } elseif ($action === 'export') {
+            $controller->export();
         } else {
             $controller->index();
         }
         break;
     case 'balance':
-        (new App\Controllers\BalanceController())->index();
+        $controller = new App\Controllers\BalanceController();
+        if ($action === 'export') {
+            $controller->export();
+        } else {
+            $controller->index();
+        }
         break;
     case 'releve':
-        (new App\Controllers\ReleveController())->index();
+        $controller = new App\Controllers\ReleveController();
+        if ($action === 'export') {
+            $controller->export();
+        } else {
+            $controller->index();
+        }
         break;
     default:
         echo 'Page not found';

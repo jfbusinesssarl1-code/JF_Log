@@ -9,7 +9,8 @@ class Database
 {
     private $client;
     private $db;
-    public function __construct($uri = 'mongodb+srv://congobuildjfbusiness_db_user:onesime@freeclouster.pqw6eon.mongodb.net/?appName=FreeClouster', $dbName = 'compta')
+    // public function __construct($uri = 'mongodb://localhost:27017', $dbName = 'compta')
+    public function __construct($uri = 'mongodb://192.168.0.107:27017', $dbName = 'compta')
     {
         $this->client = new Client($uri);
         $this->db = $this->client->$dbName;

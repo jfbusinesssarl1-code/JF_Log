@@ -6,20 +6,20 @@ if (session_status() === PHP_SESSION_NONE)
 <html lang="fr">
 
 <head>
-  <meta charset="UTF-8">
-  <title>Livre de caisse</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <?php $title = 'Livre de caisse';
+  require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
 <body>
   <?php include __DIR__ . '/navbar.php'; ?>
   <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="mb-0 fw-bold fs-2">Livre de caisse</h2>
       <div>
-        <a class="btn btn-outline-primary me-2" href="?page=caisse&action=export&format=word">Exporter Word</a>
-        <a class="btn btn-outline-secondary" href="?page=caisse&action=export&format=pdf">Exporter PDF</a>
+        <a class="btn btn-outline-secondary me-2" href="?page=caisse&action=export&format=pdf">Exporter PDF</a>
+        <?php if (!class_exists('\\Mpdf\\Mpdf')): ?>
+        <button class="btn btn-outline-info" type="button" onclick="exportCaisseToPDFClient()">Exporter PDF
+          (imprimer)</button>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -70,7 +70,7 @@ if (session_status() === PHP_SESSION_NONE)
 
       <table class="table table-bordered">
         <thead>
-          <h1>Tableau des opérations ----</h1>
+          <h2 class="mb-0 fw-bold fs-2">Livre de caisse</h2>
           <tr class="table-secondary table-gradient">
             <th>Date</th>
             <th>Type</th>
@@ -115,6 +115,30 @@ if (session_status() === PHP_SESSION_NONE)
     </div>
 
     <!-- Add Entry Section -->
+
+    <?php if (!class_exists('\\Mpdf\\Mpdf')): ?>
+    <div class="alert alert-warning">Le serveur ne dispose pas du générateur PDF (<code>mpdf/mpdf</code>). Cliquez sur
+      <strong>Exporter PDF (imprimer)</strong> pour ouvrir une version imprimable et enregistrer en PDF via votre
+      navigateur, ou installez <code>composer require mpdf/mpdf</code> pour des PDF côté serveur.
+    </div>
+    <?php endif; ?>
+
+    <script>
+    function exportCaisseToPDFClient() {
+      // Collect table HTML
+      const table = document.querySelector('.table-responsive .table');
+      if (!table) return alert('Tableau introuvable');
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Livre de caisse</title>` +
+        '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' +
+        '</head><body class="p-4">' +
+        '<h2>Livre de caisse</h2>' + table.outerHTML +
+        '<script>window.onload = function(){ window.print(); }</' + 'script>' +
+        '</body></html>';
+      const w = window.open('', '_blank');
+      w.document.write(html);
+      w.document.close();
+    }
+    </script>
     <div class="card mb-4">
       <div class="card-header bg-light">
         <h5 class="mb-0">Ajouter une opération</h5>
@@ -144,6 +168,7 @@ if (session_status() === PHP_SESSION_NONE)
     </div>
 
   </div>
+  <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>
 
 </html>

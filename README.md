@@ -69,7 +69,11 @@ Accédez à : http://localhost:8000
 - ⚖️ **Balance** : Vérification des débits/crédits
 - 📦 **Fiche de Stock** : Gestion des inventaires
 - 📋 **Relevé** : Consultation des opérations filtrées
-- 🔒 **Gestion des utilisateurs** : Création et attribution de rôles (admin only)
+- �️ **Exports** : Tous les exports sont désormais au format **PDF**. Pour des exports serveur fiables, installez `mpdf/mpdf` :
+  ```bash
+  composer require mpdf/mpdf
+  ```
+- �🔒 **Gestion des utilisateurs** : Création et attribution de rôles (admin only)
 
 ## 🆘 Dépannage
 

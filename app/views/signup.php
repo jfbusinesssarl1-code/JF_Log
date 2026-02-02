@@ -2,10 +2,8 @@
 <html lang="fr">
 
 <head>
-  <meta charset="UTF-8">
-  <title>Inscription - Comptabilité</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <?php $title = 'Inscription - Comptabilité';
+  require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
 <body class="bg-light min-vh-100 d-flex align-items-center"
@@ -61,30 +59,30 @@
       </div>
     </div>
   </div>
-</body>
-<script>
-  function validateSignupForm() {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    const passwordConfirm = document.getElementById('password_confirm').value;
-    let errors = [];
+  <?php require __DIR__ . '/_layout_footer.php'; ?>
+  <script>
+    function validateSignupForm() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('password_confirm').value;
+      let errors = [];
 
-    if (username.length < 3 || username.length > 32 || !/^[a-zA-Z0-9_]+$/.test(username)) {
-      errors.push("Nom d'utilisateur invalide (3-32 caractères, lettres/chiffres/_ uniquement)");
-    }
-    if (password.length < 6) {
-      errors.push("Mot de passe trop court (min. 6 caractères)");
-    }
-    if (password !== passwordConfirm) {
-      errors.push("Les mots de passe ne correspondent pas");
-    }
+      if (username.length < 3 || username.length > 32 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+        errors.push("Nom d'utilisateur invalide (3-32 caractères, lettres/chiffres/_ uniquement)");
+      }
+      if (password.length < 6) {
+        errors.push("Mot de passe trop court (min. 6 caractères)");
+      }
+      if (password !== passwordConfirm) {
+        errors.push("Les mots de passe ne correspondent pas");
+      }
 
-    if (errors.length) {
-      alert(errors.join('\n'));
-      return false;
+      if (errors.length) {
+        alert(errors.join('\n'));
+        return false;
+      }
+      return true;
     }
-    return true;
-  }
-</script>
+  </script>
 
 </html>

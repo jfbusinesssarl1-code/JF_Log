@@ -7,28 +7,24 @@ if (session_status() === PHP_SESSION_NONE) {
 <html lang="fr">
 
 <head>
-  <meta charset="UTF-8">
-  <title>Grand-Livre - Comptabilité</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <?php $title = 'Grand-Livre - Comptabilité';
+  require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
 <body>
   <?php include __DIR__ . '/navbar.php'; ?>
   <div class="container mt-4">
     <h2>Grand-Livre</h2>
-    <form method="get" class="mb-3">
+    <form id="grandlivreForm" method="get" class="mb-3">
       <input type="hidden" name="page" value="grandlivre">
       <div class="row">
         <div class="col-md-4">
-          <select name="compte" class="form-select" onchange="this.form.submit()">
-            <?php if (!empty($comptes)):
-              foreach ($comptes as $c): ?>
-                <option value="<?= htmlspecialchars($c) ?>" <?= ($selected == $c) ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($c) ?>
-                </option>
-              <?php endforeach; endif; ?>
-          </select>
+          <div class="position-relative">
+            <input type="text" id="compte_grandlivre" class="form-control" value="<?= htmlspecialchars($selected) ?>"
+              placeholder="Compte">
+            <div id="compte_grandlivre_suggestions" class="list-group"
+              style="position:absolute;z-index:1050;width:100%;max-height:240px;overflow:auto;display:none;"></div>
+          </div>
         </div>
         <div class="col-md-3">
           <input type="date" name="date_debut" class="form-control"
@@ -40,6 +36,10 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
         <div class="col-md-2">
           <button class="btn btn-secondary w-100" type="submit">Filtrer</button>
+          <a class="btn btn-outline-secondary w-100 mt-2 position-fixed"
+            style="max-width:150px; bottom:30px; right: 2%;"
+            href="?page=grandlivre&action=export&compte=<?= urlencode($selected) ?>&date_debut=<?= htmlspecialchars($_GET['date_debut'] ?? '') ?>&date_fin=<?= htmlspecialchars($_GET['date_fin'] ?? '') ?>">Exporter
+            PDF</a>
         </div>
       </div>
     </form>
@@ -50,27 +50,57 @@ if (session_status() === PHP_SESSION_NONE) {
           <th style="width:25%">Libellé</th>
           <th>Débit</th>
           <th>Crédit</th>
-          <th style="width:1%">Actions</th>
+          <!-- <th style="width:1%">Actions</th> -->
         </tr>
       </thead>
       <tbody>
         <?php if (!empty($entries)):
           foreach ($entries as $entry): ?>
-            <tr>
-              <td><?= htmlspecialchars($entry['date'] ?? '') ?></td>
-              <td><?= htmlspecialchars($entry['libelle'] ?? '') ?></td>
-              <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
-              <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
-              <td class="d-flex justify-content-center gap-1">
-                <a href="?page=grandlivre&action=edit&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-warning">Modifier</a>
-                <a href="?page=grandlivre&action=delete&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-danger"
-                  onclick="return confirm('Confirmer la suppression ?');">Supprimer</a>
-              </td>
-            </tr>
-          <?php endforeach; endif; ?>
+        <tr>
+          <td><?= htmlspecialchars($entry['date'] ?? '') ?></td>
+          <td><?= htmlspecialchars($entry['libelle'] ?? '') ?></td>
+          <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
+          <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
+        </tr>
+        <?php endforeach; endif; ?>
       </tbody>
     </table>
   </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    AccountSearch.fetchComptes().then(function() {
+      // add hidden input for submission
+      var parent = document.getElementById('compte_grandlivre').parentNode;
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.id = 'compte_grandlivre_code';
+      hidden.name = 'compte';
+      hidden.value = document.getElementById('compte_grandlivre').value || '';
+      parent.appendChild(hidden);
+      // prefill display
+      if (hidden.value) {
+        var found = (window.comptesList || []).find(c => c.code === hidden.value);
+        if (found) document.getElementById('compte_grandlivre').value = found.code + ' — ' + (found.label ||
+          '');
+      }
+
+      AccountSearch.createSuggestionBox({
+        inputId: 'compte_grandlivre',
+        suggestionsId: 'compte_grandlivre_suggestions',
+        renderItemHtml: function(c) {
+          return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
+        },
+        onChoose: function(item) {
+          if (!item) return;
+          document.getElementById('compte_grandlivre').value = item.code + ' — ' + (item.label || '');
+          document.getElementById('compte_grandlivre_code').value = item.code;
+          document.getElementById('grandlivreForm').submit();
+        }
+      });
+    }).catch(console.error);
+  });
+  </script>
+  <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>
 
 </html>

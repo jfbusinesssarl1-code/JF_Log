@@ -7,10 +7,8 @@ if (session_status() === PHP_SESSION_NONE) {
 <html lang="fr">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Modifier une opération de stock</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <?php $title = 'Modifier - Stock';
+    require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
 <body>
@@ -67,14 +65,22 @@ if (session_status() === PHP_SESSION_NONE) {
             </div>
             <div class="row g-2 mb-2">
                 <div class="col-md-6">
-                    <label for="compte" class="form-label">Compte</label>
-                    <input type="text" name="compte" id="compte" class="form-control"
-                        value="<?= htmlspecialchars($entry['compte'] ?? '') ?>" required>
+                    <label for="compte_search" class="form-label">Compte</label>
+                    <div class="position-relative">
+                        <input type="text" id="compte_search" class="form-control"
+                            placeholder="Rechercher un compte (code ou libellé)">
+                        <div id="compte_suggestions" class="list-group"
+                            style="position:absolute;z-index:1050;width:100%;max-height:240px;overflow:auto;display:none;">
+                        </div>
+                    </div>
+                    <input type="hidden" name="compte" id="compte">
+                    <input type="text" id="compte_display" class="form-control mt-2" placeholder="Compte sélectionné"
+                        readonly>
                 </div>
                 <div class="col-md-6">
                     <label for="intitule" class="form-label">Intitulé compte</label>
                     <input type="text" name="intitule" id="intitule" class="form-control"
-                        value="<?= htmlspecialchars($entry['intitule'] ?? '') ?>" required>
+                        value="<?= htmlspecialchars($entry['intitule'] ?? '') ?>" required readonly>
                 </div>
             </div>
             <div class="row g-2 mb-2">
@@ -110,6 +116,68 @@ if (session_status() === PHP_SESSION_NONE) {
         <a href="?page=stock" class="btn btn-secondary mt-3">Retour à la fiche de stock</a>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const currentCompte = "<?= htmlspecialchars($entry['compte'] ?? '') ?>";
+
+        // Use shared AccountSearch and pre-fill if possible
+        document.addEventListener('DOMContentLoaded', function () {
+            AccountSearch.fetchComptes().then(function () {
+                AccountSearch.createSuggestionBox({
+                    inputId: 'compte_search',
+                    suggestionsId: 'compte_suggestions',
+                    renderItemHtml: function (c) {
+                        return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-primary" data-action="choose">Choisir</button>
+                            </div>`;
+                    },
+                    onChoose: function (item) {
+                        if (!item) return;
+                        document.getElementById('compte').value = item.code;
+                        document.getElementById('compte_display').value = item.code + ' — ' + (item.label || '');
+                        document.getElementById('intitule').value = item.intitule || '';
+                    }
+                });
+
+                // Pre-fill currentCompte if available
+                if (currentCompte) {
+                    const acc = (window.comptesList || []).find(c => c.code === currentCompte);
+                    if (acc) {
+                        document.getElementById('compte').value = acc.code;
+                        document.getElementById('intitule').value = acc.intitule || '';
+                        document.getElementById('compte_display').value = acc.code + ' — ' + (acc.label || '');
+                    }
+                }
+            }).catch(console.error);
+        });
+
+        // Helpers
+        function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function escapeAttr(s) { return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+        function updateIntitule() {
+            const intituleInput = document.getElementById('intitule');
+            const compteEl = document.getElementById('compte');
+            if (!compteEl || !intituleInput) return;
+            // If the element is a select (legacy), read dataset on selected option
+            if (compteEl.tagName && compteEl.tagName.toLowerCase() === 'select') {
+                const selected = compteEl.options[compteEl.selectedIndex];
+                if (selected && selected.value && selected.dataset.intitule) {
+                    intituleInput.value = selected.dataset.intitule;
+                    return;
+                }
+            }
+            // Otherwise, lookup by code in the loaded comptes list
+            const code = compteEl.value;
+            if (code) {
+                const acc = (window.comptesList || []).find(c => c.code === code);
+                intituleInput.value = acc ? (acc.intitule || '') : '';
+            } else {
+                intituleInput.value = '';
+            }
+        }
+    </script>
+    <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>
 
 </html>
