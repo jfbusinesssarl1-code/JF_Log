@@ -59,6 +59,49 @@ class JournalController extends Controller
         $entries = $model->getFiltered($filters);
         $this->render('journal', ['entries' => $entries, 'filters' => $filters]);
     }
+
+    // Retourne uniquement le <tbody> (utilisé pour refresh partiel via AJAX)
+    public function list_partial()
+    {
+        $this->requireRole(['accountant', 'manager', 'admin']);
+        $model = new JournalModel();
+        $filters = [
+            'compte' => $_GET['compte'] ?? '',
+            'lieu' => $_GET['lieu'] ?? '',
+            'date_debut' => $_GET['date_debut'] ?? '',
+            'date_fin' => $_GET['date_fin'] ?? ''
+        ];
+        $entries = $model->getFiltered($filters);
+        header('Content-Type: text/html; charset=utf-8');
+        header('X-Row-Count: ' . count($entries));
+        if (!empty($entries)) {
+            foreach ($entries as $entry) {
+                $id = isset($entry['_id']) ? (string) $entry['_id'] : '';
+                $date = htmlspecialchars($entry['date'] ?? '');
+                $compte = htmlspecialchars($entry['compte'] ?? '');
+                $lieu = htmlspecialchars($entry['lieu'] ?? '');
+                $libelle = htmlspecialchars($entry['libelle'] ?? '');
+                $debit = htmlspecialchars($entry['debit'] ?? '');
+                $credit = htmlspecialchars($entry['credit'] ?? '');
+                echo "<tr>\n";
+                echo "<td>$date</td>\n";
+                echo "<td>$compte</td>\n";
+                echo "<td>$lieu</td>\n";
+                echo "<td>$libelle</td>\n";
+                echo "<td>$debit</td>\n";
+                echo "<td>$credit</td>\n";
+                if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])) {
+                    echo "<td class=\"d-flex justify-content-center gap-1\"> <a href=\"?page=journal&action=edit&id=$id\" class=\"btn btn-sm btn-warning\">Modifier</a> <a href=\"?page=journal&action=delete&id=$id\" class=\"btn btn-sm btn-danger\" onclick=\"return confirm('Confirmer la suppression ?');\">Supprimer</a> </td>\n";
+                } else {
+                    echo "<td>—</td>\n";
+                }
+                echo "</tr>\n";
+            }
+        } else {
+            echo '<tr><td colspan="7" class="text-center">Aucune opération</td></tr>';
+        }
+        exit;
+    }
     public function add()
     {
         $this->requireRole(['accountant', 'admin']);

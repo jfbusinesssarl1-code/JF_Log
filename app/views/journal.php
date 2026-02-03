@@ -349,6 +349,16 @@ if (session_status() === PHP_SESSION_NONE) {
           notice.textContent = 'Écriture ajoutée — prête pour la suivante.';
           form.closest('.modal-body')?.prepend(notice);
           setTimeout(()=> notice.remove(), 2000);
+
+          // mark modal as having new data and trigger an immediate partial refresh
+          form.dataset.dirty = '1';
+          refreshJournalPartial().catch(err => console.warn('journal partial refresh failed', err));
+        }
+      });
+    });
+  })();
+
+  // Filter compte search suggestions
         }).catch((err)=>{
           setLoading(false);
           alert('Échec : ' + (err && err.message ? err.message : 'Erreur lors de l\'envoi'));
@@ -385,6 +395,33 @@ if (session_status() === PHP_SESSION_NONE) {
       document.getElementById('filter_compte_display').addEventListener('input', function() {
         if (!this.value) document.getElementById('filter_compte').value = '';
       });
+
+      // helper: refresh journal tbody via partial endpoint (preserves current filters)
+      async function refreshJournalPartial() {
+        const q = (location.search || '');
+        const url = '?page=journal&action=list_partial' + (q ? '&' + q.slice(1) : '');
+        const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) throw new Error('Failed to fetch journal partial: ' + res.status);
+        const html = await res.text();
+        const tmp = document.createElement('tbody');
+        tmp.innerHTML = html.trim();
+        const tBody = document.querySelector('.table-responsive .table tbody');
+        if (!tBody) return;
+        tBody.innerHTML = tmp.innerHTML;
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      // If modal had new entries, refresh table on hide
+      const journalModal = document.getElementById('journalAddModal');
+      if (journalModal) {
+        journalModal.addEventListener('hidden.bs.modal', function() {
+          const form = document.getElementById('journal-add-form');
+          if (form && form.dataset.dirty === '1') {
+            refreshJournalPartial().catch(err => console.warn('journal refresh on hide failed', err));
+            delete form.dataset.dirty;
+          }
+        });
+      }
     }).catch(console.error);
   });
   </script>
