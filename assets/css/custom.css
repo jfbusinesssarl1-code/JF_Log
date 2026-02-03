@@ -29,9 +29,31 @@
 @media print{
   body{ background:#fff; }
   .no-print{ display:none !important; }
-  .table{ font-size:12px; }
+  /* Slightly reduced print table type for denser output */
+  .table{ font-size:11px; }
   img{ max-height:100px; }
   @page{ size:A4; margin:15mm; }
+}
+
+/* Global table typography (screen): reduced for denser UIs while keeping readability */
+.table, .table-responsive table { font-size: 0.85rem; }
+/* Small screens: make tables compact but still readable */
+@media (max-width: 575px) {
+  .table, .table-responsive table { font-size: 0.78rem; }
+}
+
+/* Floating action button for caisse: smaller, fixed, and above content to avoid overlap */
+.btn-fab-caisse {
+  position: fixed;
+  right: 1.5%;
+  bottom: 1.5%;
+  font-size: 0.95rem;
+  padding: 0.45rem 0.7rem;
+  z-index: 1050;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+@media (max-width: 767px) {
+  .btn-fab-caisse { right: 1rem; bottom: 1rem; }
 }
 
 /* Floating Action Button (FAB) */
