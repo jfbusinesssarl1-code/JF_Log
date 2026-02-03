@@ -236,13 +236,21 @@ if (session_status() === PHP_SESSION_NONE)
         } catch (e) {
           /* silent */
         }
-      });
 
-      // --- AJAX submit for modal (graceful fallback: form still works without JS) ---
-      const submitBtn = modalEl.querySelector('button[type="submit"][form="caisse-modal-form"]');
-
-      function setLoading(on, text) {
-        if (!submitBtn) return;
+    // If the user added one or more entries while the modal was open,
+    // refresh the page when they explicitly close the modal so the
+    // whole UI (filters, totals, sidebars) is consistent.
+    try {
+      if (window.__caisseDirty) {
+        // small delay to let the hide animation finish
+        setTimeout(() => {
+          window.__caisseDirty = false;
+          window.location.reload();
+        }, 150);
+      }
+    } catch (e) {
+      /* silent */
+    }
         submitBtn.disabled = on;
         submitBtn.innerHTML = on ? (text || 'En cours...') : 'Ajouter';
       }
@@ -333,12 +341,8 @@ if (session_status() === PHP_SESSION_NONE)
             modalForm.reset();
             const first = modalForm.querySelector('input,select,textarea');
             if (first) first.focus();
-          } catch (e) {
-            /* silent */
-          }
-
-          // optimistic UI: append a temporary row (will be removed/replaced by server response)
-          try {
+        // mark that we performed a successful add while modal was open
+        window.__caisseDirty = true;
             const tBody = document.querySelector('.table-responsive .table tbody');
             if (tBody && json.item) {
               const it = json.item;
