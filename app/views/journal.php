@@ -327,12 +327,17 @@ if (session_status() === PHP_SESSION_NONE) {
           }
         }).then(async (res) => {
           setLoading(false);
+          const ctype = (res.headers.get('content-type')||'');
+          const isJson = ctype.indexOf('application/json') !== -1;
           if (!res.ok) {
             const txt = await res.text().catch(()=>res.statusText);
             throw new Error(txt || 'Erreur réseau');
           }
-          const ctype = (res.headers.get('content-type')||'');
-          if (ctype.indexOf('application/json') === -1) throw new Error('Réponse inattendue');
+          if (!isJson) {
+            const body = await res.text().catch(()=>'<no-body>');
+            const snippet = (body || '').trim().slice(0,2000);
+            throw new Error('Réponse inattendue — serveur a renvoyé du HTML/texte:\n' + snippet);
+          }
           return res.json();
         }).then((json) => {
           if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');

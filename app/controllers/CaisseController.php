@@ -7,7 +7,7 @@ class CaisseController extends Controller
 {
   public function index()
   {
-    $this->requireRole(['caissier', 'manager', 'admin']);
+    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
     $model = new CaisseModel();
     $filters = [
       'date_debut' => $_GET['date_debut'] ?? '',
@@ -20,31 +20,157 @@ class CaisseController extends Controller
     $this->render('caisse', ['items' => $items, 'filters' => $filters]);
   }
 
+  // Retourne uniquement le <tbody> (utilisé pour refresh partiel via AJAX)
+  public function list_partial()
+  {
+    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
+    $model = new CaisseModel();
+    $filters = [
+      'date_debut' => $_GET['date_debut'] ?? '',
+      'date_fin' => $_GET['date_fin'] ?? '',
+      'type' => $_GET['type'] ?? '',
+      'operateur' => $_GET['operateur'] ?? '',
+      'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? ''
+    ];
+    $items = $model->getAll($filters);
+    header('Content-Type: text/html; charset=utf-8');
+    // Provide the number of rows to help clients validate partial updates
+    header('X-Row-Count: ' . count($items));
+    if (!empty($items)) {
+      foreach ($items as $it) {
+        $id = isset($it['_id']) ? (string) $it['_id'] : '';
+        $date = htmlspecialchars($it['date'] ?? '');
+        $type = htmlspecialchars($it['type'] ?? '');
+        $num = htmlspecialchars($it['numero_bon_manuscrit'] ?? '');
+        $oper = htmlspecialchars($it['operateur'] ?? '');
+        $lib = htmlspecialchars($it['libelle'] ?? '');
+        $recette = number_format($it['recette'] ?? 0, 2);
+        $depense = number_format($it['depense'] ?? 0, 2);
+        $solde = number_format($it['solde'] ?? 0, 2);
+        echo "<tr>\n";
+        echo "<td>$date</td>\n";
+        echo "<td>$type</td>\n";
+        echo "<td>$num</td>\n";
+        echo "<td>$oper</td>\n";
+        echo "<td>$lib</td>\n";
+        echo "<td class=\"text-end\">$recette</td>\n";
+        echo "<td class=\"text-end\">$depense</td>\n";
+        echo "<td class=\"text-end\">$solde</td>\n";
+        if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])) {
+          echo "<td><a class=\"btn btn-sm btn-primary\" href=\"?page=caisse&action=edit&id=$id\">Modifier</a> <a class=\"btn btn-sm btn-danger\" href=\"?page=caisse&action=delete&id=$id\" onclick=\"return confirm('Supprimer ?')\">Supprimer</a></td>\n";
+        } else {
+          echo "<td>—</td>\n";
+        }
+        echo "</tr>\n";
+      }
+    } else {
+      echo '<tr><td colspan="9" class="text-center">Aucune opération</td></tr>';
+    }
+    exit;
+  }
+
   public function add()
   {
-    $this->requireRole(['caissier']);
+    $this->requireRole(['caissier', 'admin']);
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $token = $_POST['csrf_token'] ?? '';
-      if (!\App\Core\Csrf::checkToken($token))
+      if (!\App\Core\Csrf::checkToken($token)) {
+        // If AJAX, return JSON error instead of die/redirect
+        $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+          || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
+        if ($isAjax) {
+          header('Content-Type: application/json; charset=utf-8');
+          echo json_encode(['success' => false, 'error' => 'Erreur CSRF']);
+          exit;
+        }
         die('Erreur CSRF');
+      }
       $date = $_POST['date'] ?? '';
       $type = $_POST['type'] ?? '';
       $libelle = trim($_POST['libelle'] ?? '');
-      $montant = floatval($_POST['montant'] ?? 0);
+      $montant = isset($_POST['montant']) ? $_POST['montant'] : '';
       $numero_bon_manuscrit = trim($_POST['numero_bon_manuscrit'] ?? '');
       $operateur = trim($_POST['operateur'] ?? '');
       $user = $_SESSION['user'] ?? null;
+
+      $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+        || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
+
+      // Server-side validation (return JSON on XHR)
+      $errors = [];
+      if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $errors[] = 'Date invalide';
+      if (!in_array($type, ['entree', 'sortie'])) $errors[] = 'Type invalide';
+      if ($libelle === '' || strlen($libelle) > 255) $errors[] = 'Libellé invalide';
+      if ($montant === '' || !is_numeric($montant) || floatval($montant) <= 0) $errors[] = 'Montant invalide';
+      if ($operateur === '' || strlen($operateur) > 128) $errors[] = 'Opérateur invalide';
+
+      if (!empty($errors)) {
+        if ($isAjax) {
+          header('Content-Type: application/json; charset=utf-8');
+          http_response_code(400);
+          echo json_encode(['success' => false, 'errors' => $errors]);
+          exit;
+        }
+        // legacy behaviour for non-AJAX
+        die(implode('<br>', $errors));
+      }
+
       $data = [
         'date' => $date,
         'type' => $type,
         'libelle' => $libelle,
-        'montant' => $montant,
+        'montant' => floatval($montant),
         'numero_bon_manuscrit' => $numero_bon_manuscrit,
         'operateur' => $operateur,
         'created_by' => $user['username'] ?? 'unknown'
       ];
+
       $model = new CaisseModel();
-      $model->insert($data);
+      try {
+        $insertResult = $model->insert($data);
+      } catch (\Throwable $e) {
+        error_log('CaisseController::add insert failed: ' . $e->getMessage());
+        if ($isAjax) {
+          header('Content-Type: application/json; charset=utf-8');
+          http_response_code(500);
+          echo json_encode(['success' => false, 'error' => 'Erreur lors de l\'enregistrement']);
+          exit;
+        }
+        throw $e;
+      }
+
+      // If request expects JSON (AJAX), return the created item (with computed recette/depense/solde)
+      if ($isAjax) {
+        $insertedId = (string) ($insertResult->getInsertedId() ?? '');
+        if (!$insertedId) {
+          header('Content-Type: application/json; charset=utf-8');
+          http_response_code(500);
+          echo json_encode(['success' => false, 'error' => 'Insertion échouée']);
+          exit;
+        }
+        // Recalculate solde by fetching items (getAll computes cumulative solde)
+        $all = $model->getAll();
+        $found = null;
+        foreach ($all as $it) {
+          if ((string) ($it['_id'] ?? '') === $insertedId) {
+            $found = $it;
+            break;
+          }
+        }
+        if ($found) {
+          $found['_id'] = (string) $found['_id'];
+          $found['montant'] = floatval($found['montant'] ?? 0);
+          $found['recette'] = floatval($found['recette'] ?? 0);
+          $found['depense'] = floatval($found['depense'] ?? 0);
+          $found['solde'] = floatval($found['solde'] ?? 0);
+        } else {
+          // best-effort fallback
+          $found = array_merge($data, ['_id' => $insertedId, 'recette' => $data['type'] === 'entree' ? $data['montant'] : 0.0, 'depense' => $data['type'] === 'sortie' ? $data['montant'] : 0.0, 'solde' => null]);
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'item' => $found]);
+        exit;
+      }
     }
     header('Location: ?page=caisse');
     exit;
@@ -52,7 +178,7 @@ class CaisseController extends Controller
 
   public function edit()
   {
-    $this->requireRole(['caissier']);
+    $this->requireRole(['caissier', 'admin']);
     $id = $_GET['id'] ?? null;
     $model = new CaisseModel();
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id) {
@@ -77,7 +203,7 @@ class CaisseController extends Controller
 
   public function delete()
   {
-    $this->requireRole(['caissier']);
+    $this->requireRole(['caissier', 'admin']);
     $id = $_GET['id'] ?? null;
     if ($id) {
       $model = new CaisseModel();
@@ -89,7 +215,7 @@ class CaisseController extends Controller
 
   public function export()
   {
-    $this->requireRole(['caissier', 'manager', 'admin']);
+    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
     $format = $_GET['format'] ?? 'pdf';
     // Normalize: only PDF exports supported
     if ($format !== 'pdf')

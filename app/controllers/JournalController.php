@@ -3,11 +3,12 @@ namespace App\Controllers;
 use App\Core\Controller;
 
 use App\Models\JournalModel;
+use App\Models\CompteModel;
 class JournalController extends Controller
 {
     public function delete()
     {
-        $this->requireRole(['accountant', 'manager', 'admin']);
+        $this->requireRole(['accountant', 'admin']);
         $id = $_GET['id'] ?? null;
         if ($id) {
             $model = new JournalModel();
@@ -19,7 +20,7 @@ class JournalController extends Controller
 
     public function edit()
     {
-        $this->requireRole(['accountant', 'manager', 'admin']);
+        $this->requireRole(['accountant', 'admin']);
         $id = $_GET['id'] ?? null;
         $model = new JournalModel();
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id) {
@@ -60,12 +61,22 @@ class JournalController extends Controller
     }
     public function add()
     {
-        $this->requireRole(['accountant', 'manager', 'admin']);
+        $this->requireRole(['accountant', 'admin']);
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                || (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false);
+
             $token = $_POST['csrf_token'] ?? '';
             if (!\App\Core\Csrf::checkToken($token)) {
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'error' => 'Erreur CSRF']);
+                    exit;
+                }
                 die('Erreur CSRF');
             }
+
             $date = $_POST['date'] ?? '';
             $lieu = trim($_POST['lieu'] ?? '');
 
@@ -107,40 +118,73 @@ class JournalController extends Controller
             }
 
             if ($errors) {
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'errors' => $errors]);
+                    exit;
+                }
                 die(implode('<br>', $errors));
             }
 
-            $journal = new JournalModel();
+            try {
+                $journal = new JournalModel();
 
-            // écriture débit
-            $journal->insert([
-                'date' => $date,
-                'lieu' => $lieu,
-                'compte' => $compte_debit,
-                'intitule' => $intitule_debit,
-                'libelle' => $libelle,
-                'debit' => floatval($debit),
-                'credit' => 0
-            ]);
+                // écriture débit
+                $journal->insert([
+                    'date' => $date,
+                    'lieu' => $lieu,
+                    'compte' => $compte_debit,
+                    'intitule' => $intitule_debit,
+                    'libelle' => $libelle,
+                    'debit' => floatval($debit),
+                    'credit' => 0
+                ]);
 
-            // écriture crédit
-            $journal->insert([
-                'date' => $date,
-                'lieu' => $lieu,
-                'compte' => $compte_credit,
-                'intitule' => $intitule_credit,
-                'libelle' => $libelle,
-                'debit' => 0,
-                'credit' => floatval($credit)
-            ]);
+                // écriture crédit
+                $journal->insert([
+                    'date' => $date,
+                    'lieu' => $lieu,
+                    'compte' => $compte_credit,
+                    'intitule' => $intitule_credit,
+                    'libelle' => $libelle,
+                    'debit' => 0,
+                    'credit' => floatval($credit)
+                ]);
 
-            // Mise à jour de la fiche de stock pour chaque compte
-            $stockModel = new \App\Models\StockModel();
-            $stockModel->addOrUpdate($compte_debit, $intitule_debit, $debit, 0);
-            $stockModel->addOrUpdate($compte_credit, $intitule_credit, 0, $credit);
+                // Mise à jour de la fiche de stock pour chaque compte
+                $stockModel = new \App\Models\StockModel();
+                $stockModel->addOrUpdate($compte_debit, $intitule_debit, $debit, 0);
+                $stockModel->addOrUpdate($compte_credit, $intitule_credit, 0, $credit);
 
-            header('Location: ?page=journal');
-            exit;
+                // Si le compte n'existe pas dans PLAN.xlsx, essayer de l'ajouter (non bloquant)
+                try {
+                    $cm = new CompteModel();
+                    $cm->addIfMissing($compte_debit, $intitule_debit);
+                    $cm->addIfMissing($compte_credit, $intitule_credit);
+                } catch (\Throwable $e) {
+                    error_log('JournalController: ajout compte au PLAN.xlsx échoué: ' . $e->getMessage());
+                }
+
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['success' => true]);
+                    exit;
+                }
+
+                header('Location: ?page=journal');
+                exit;
+
+            } catch (\Throwable $e) {
+                error_log('JournalController::add exception: ' . $e->getMessage());
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'error' => 'Erreur serveur']);
+                    exit;
+                }
+                throw $e;
+            }
         }
 
         // Récupérer les comptes pour le select

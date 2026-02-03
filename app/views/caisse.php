@@ -312,9 +312,16 @@ if (session_status() === PHP_SESSION_NONE)
           credentials: 'same-origin'
         }).then(async (res) => {
           setLoading(false);
+          const ctype = (res.headers.get('content-type') || '');
+          const isJson = ctype.indexOf('application/json') !== -1;
           if (!res.ok) {
             const txt = await res.text().catch(() => res.statusText);
             throw new Error(txt || 'Erreur réseau');
+          }
+          if (!isJson) {
+            const body = await res.text().catch(() => '<no-body>');
+            const snippet = (body || '').trim().slice(0, 2000);
+            throw new Error('Réponse inattendue — serveur a renvoyé du HTML/texte:\n' + snippet);
           }
           return res.json();
         }).then((json) => {
