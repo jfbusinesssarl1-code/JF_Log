@@ -66,14 +66,13 @@ if (session_status() === PHP_SESSION_NONE)
       </div>
     </div>
 
-    <div class="table-responsive" style="padding-bottom:88px;">
+    <div class="table-responsive" style="padding-bottom:88px;" style="font-size: small;">
 
       <h2 class="mb-0 fw-bold fs-2">Livre de caisse</h2>
       <table class="table table-bordered">
         <thead>
           <tr class="table-secondary table-gradient">
             <th>Date</th>
-            <th>Type</th>
             <th>N° Bon Manuel</th>
             <th>Opérateur</th>
             <th>Libellé</th>
@@ -88,18 +87,18 @@ if (session_status() === PHP_SESSION_NONE)
             foreach ($items as $it): ?>
           <tr>
             <td><?= htmlspecialchars($it['date'] ?? '') ?></td>
-            <td><?= htmlspecialchars($it['type'] ?? '') ?></td>
             <td><?= htmlspecialchars($it['numero_bon_manuscrit'] ?? '') ?></td>
             <td><?= htmlspecialchars($it['operateur'] ?? '') ?></td>
             <td><?= htmlspecialchars($it['libelle'] ?? '') ?></td>
             <td class="text-end"><?= number_format($it['recette'] ?? 0, 2) ?></td>
             <td class="text-end"><?= number_format($it['depense'] ?? 0, 2) ?></td>
             <td class="text-end"><?= number_format($it['solde'] ?? 0, 2) ?></td>
-            <td>
+            <td class="d-flex justify-content-center gap-2">
               <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])): ?>
-              <a class="btn btn-sm btn-primary" href="?page=caisse&action=edit&id=<?= $it['_id'] ?? '' ?>">Modifier</a>
+              <a class="btn btn-sm btn-primary" href="?page=caisse&action=edit&id=<?= $it['_id'] ?? '' ?>"
+                style="font-size: small;">Modifier</a>
               <a class="btn btn-sm btn-danger" href="?page=caisse&action=delete&id=<?= $it['_id'] ?? '' ?>"
-                onclick="return confirm('Supprimer ?')">Supprimer</a>
+                onclick="return confirm('Supprimer ?')" style="font-size: small;">Supprimer</a>
               <?php else: ?>
               —
               <?php endif; ?>
@@ -142,8 +141,8 @@ if (session_status() === PHP_SESSION_NONE)
 
     <!-- bouton pour ouvrir le modal (seulement caissier + admin) -->
     <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])): ?>
-    <button type="button" class="btn btn-primary btn-fab-caisse d-none d-md-inline-flex" data-bs-toggle="modal"
-      data-bs-target="#caisseModal" aria-label="Ajouter une opération">
+    <button type="button" class="btn btn-primary btn-fab-caisse position-fixed bottom-0 end-0 me-4 mb-4"
+      data-bs-toggle="modal" data-bs-target="#caisseModal" aria-label="Ajouter une opération">
       nouvelle opération
     </button>
     <?php endif; ?>
@@ -321,10 +320,12 @@ if (session_status() === PHP_SESSION_NONE)
         }).then((json) => {
           if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');
 
-          // close modal
+          // keep modal OPEN after successful submit (user closes it explicitly)
           try {
-            const bs = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            bs.hide();
+            // reset for rapid successive entries and focus first field
+            modalForm.reset();
+            const first = modalForm.querySelector('input,select,textarea');
+            if (first) first.focus();
           } catch (e) {
             /* silent */
           }
@@ -370,7 +371,7 @@ if (session_status() === PHP_SESSION_NONE)
           try {
             const notice = document.createElement('div');
             notice.className = 'alert alert-success mt-3';
-            notice.textContent = 'Opération ajoutée — mise à jour en cours...';
+            notice.textContent = 'Opération ajoutée — prête pour la suivante.';
             modalForm.closest('.card')?.querySelector('.card-body')?.prepend(notice);
 
             // fetch updated tbody and replace it in-place; fallback to full reload on error

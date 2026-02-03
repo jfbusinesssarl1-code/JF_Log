@@ -51,7 +51,7 @@ if (session_status() === PHP_SESSION_NONE) {
       </div>
     </form>
 
-    <div class="table-responsive shadow-sm rounded-3">
+    <div class="table-responsive shadow-sm rounded-3" style="font-size: small;">
       <table class="table table-bordered align-middle mb-0">
         <thead>
           <tr>
@@ -75,9 +75,13 @@ if (session_status() === PHP_SESSION_NONE) {
             <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
             <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
             <td class="d-flex justify-content-center gap-1">
+              <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
               <a href="?page=journal&action=edit&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-warning">Modifier</a>
               <a href="?page=journal&action=delete&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-danger"
                 onclick="return confirm('Confirmer la suppression ?');">Supprimer</a>
+              <?php else: ?>
+              —
+              <?php endif; ?>
             </td>
           </tr>
           <?php endforeach; endif; ?>
@@ -85,11 +89,20 @@ if (session_status() === PHP_SESSION_NONE) {
       </table>
     </div>
 
+    <!-- bouton pour afficher le modal -->
+    <div class="fixed-action-btn no-print">
+      <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
+      <button class="btn btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+        title="Ajouter une écriture"
+        style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">nouvelle opération</button>
+      <?php endif; ?>
+    </div>
+
     <!-- Modal Journal Add -->
     <div class="modal fade" id="journalAddModal" tabindex="-1" aria-labelledby="journalAddLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-          <form method="post" action="?page=journal&action=add" onsubmit="return validateJournalForm();">
+          <form method="post" action="?page=journal&action=add" id="journal-add-form" onsubmit="return validateJournalForm();">
             <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
             <div class="modal-header">
               <h5 class="modal-title" id="journalAddLabel">Nouvelle écriture (partie double)</h5>
@@ -175,12 +188,6 @@ if (session_status() === PHP_SESSION_NONE) {
           </form>
         </div>
       </div>
-    </div>
-
-    <div class="fixed-action-btn no-print">
-      <button class="btn btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#journalAddModal"
-        title="Ajouter une écriture"
-        style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">nouvelle opération</button>
     </div>
 
   </div>
@@ -295,6 +302,55 @@ if (session_status() === PHP_SESSION_NONE) {
     }
     return true;
   }
+
+  // AJAX submit: keep Journal modal open after successful add and reset form for the next entry
+  (function(){
+    document.addEventListener('DOMContentLoaded', function(){
+      const form = document.getElementById('journal-add-form');
+      if (!form || !window.fetch || !window.FormData) return;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      function setLoading(on, text){ if(!submitBtn) return; submitBtn.disabled = on; submitBtn.innerHTML = on ? (text||'En cours...') : 'Ajouter'; }
+      form.addEventListener('submit', function(ev){
+        // let native validation show messages if invalid
+        if (!validateJournalForm()) return;
+        // prevent full-page submit when JS available
+        ev.preventDefault();
+        setLoading(true, '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>  Envoi');
+        const fd = new FormData(form);
+        fetch('?page=journal&action=add', {
+          method: 'POST',
+          body: fd,
+          credentials: 'same-origin',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          }
+        }).then(async (res) => {
+          setLoading(false);
+          if (!res.ok) {
+            const txt = await res.text().catch(()=>res.statusText);
+            throw new Error(txt || 'Erreur réseau');
+          }
+          const ctype = (res.headers.get('content-type')||'');
+          if (ctype.indexOf('application/json') === -1) throw new Error('Réponse inattendue');
+          return res.json();
+        }).then((json) => {
+          if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');
+          // keep modal open; reset form and focus for next entry
+          form.reset();
+          form.querySelector('input,select,textarea')?.focus();
+          const notice = document.createElement('div');
+          notice.className = 'alert alert-success mt-3';
+          notice.textContent = 'Écriture ajoutée — prête pour la suivante.';
+          form.closest('.modal-body')?.prepend(notice);
+          setTimeout(()=> notice.remove(), 2000);
+        }).catch((err)=>{
+          setLoading(false);
+          alert('Échec : ' + (err && err.message ? err.message : 'Erreur lors de l\'envoi'));
+        });
+      });
+    });
+  })();
 
   // Filter compte search suggestions
   document.addEventListener('DOMContentLoaded', function() {
