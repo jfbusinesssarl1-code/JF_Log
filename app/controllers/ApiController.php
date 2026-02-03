@@ -2,50 +2,38 @@
 namespace App\Controllers;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Models\CompteModel;
 
 class ApiController
 {
   /**
-   * Récupère la liste des comptes depuis PLAN.xlsx
+   * Récupère la liste des comptes depuis PLAN.xlsx (robuste — toutes feuilles, sans doublons)
    */
   public function getComptes()
   {
     header('Content-Type: application/json');
 
     try {
-      $planFile = __DIR__ . '/../../public/PLAN.xlsx';
+      $model = new CompteModel();
+      $comptes = $model->getAll();
 
-      if (!file_exists($planFile)) {
-        http_response_code(404);
-        echo json_encode(['error' => 'Fichier PLAN.xlsx non trouvé']);
-        exit;
-      }
+      // diagnostic headers (helpful in dev or when empty)
+      $planPath = (property_exists($model, 'planPath') ? $model->planPath : null);
+      $exists = ($planPath && is_file($planPath)) ? 1 : 0;
+      $readable = ($exists && is_readable($planPath)) ? 1 : 0;
+      header('X-Plan-Exists: ' . $exists);
+      header('X-Plan-Readable: ' . $readable);
+      header('X-Plan-Count: ' . count($comptes));
 
-      $spreadsheet = IOFactory::load($planFile);
-      $worksheet = $spreadsheet->getActiveSheet();
-
-      $comptes = [];
-      $highestRow = $worksheet->getHighestRow();
-
-      // Parcourir toutes les lignes
-      for ($row = 2; $row <= $highestRow; $row++) {
-        $code = trim($worksheet->getCell('A' . $row)->getValue() ?? '');
-        $intitule = trim($worksheet->getCell('B' . $row)->getValue() ?? '');
-
-        if (!empty($code)) {
-          $comptes[] = [
-            'code' => $code,
-            'intitule' => $intitule,
-            'label' => $code . ' - ' . $intitule
-          ];
-        }
-      }
-
-      echo json_encode($comptes);
-
-    } catch (\Exception $e) {
-      http_response_code(500);
-      echo json_encode(['error' => $e->getMessage()]);
+      // Toujours renvoyer un tableau (évite les erreurs côté client)
+      echo json_encode(array_values($comptes));
+    } catch (\Throwable $e) {
+      error_log('ApiController::getComptes error: ' . $e->getMessage());
+      // Provide lightweight diagnostics to help the frontend debug (no stack trace)
+      header('X-Plan-Exists: 0');
+      header('X-Plan-Readable: 0');
+      header('X-Plan-Count: 0');
+      echo json_encode([]);
     }
   }
 }
