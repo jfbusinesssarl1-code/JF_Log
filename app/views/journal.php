@@ -55,10 +55,10 @@ if (session_status() === PHP_SESSION_NONE) {
       <table class="table table-bordered align-middle mb-0">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Compte</th>
-            <th>Lieu</th>
-            <th style="width:25%">Libellé</th>
+            <th style="width: 10%;">Date</th>
+            <th style="width: 10%;">Compte</th>
+            <th style="width:10%">Lieu</th>
+            <th style="width:35%">Libellé</th>
             <th>Débit</th>
             <th>Crédit</th>
             <th style="width:1%">Actions</th>
@@ -67,34 +67,44 @@ if (session_status() === PHP_SESSION_NONE) {
         <tbody>
           <?php if (!empty($entries)):
             foreach ($entries as $entry): ?>
-          <tr>
-            <td><?= htmlspecialchars($entry['date'] ?? '') ?></td>
-            <td><?= htmlspecialchars($entry['compte'] ?? '') ?></td>
-            <td><?= htmlspecialchars($entry['lieu'] ?? '') ?></td>
-            <td><?= htmlspecialchars($entry['libelle'] ?? '') ?></td>
-            <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
-            <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
-            <td class="d-flex justify-content-center gap-1">
-              <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
-              <a href="?page=journal&action=edit&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-warning">Modifier</a>
-              <a href="?page=journal&action=delete&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-danger"
-                onclick="return confirm('Confirmer la suppression ?');">Supprimer</a>
-              <?php else: ?>
-              —
-              <?php endif; ?>
-            </td>
-          </tr>
-          <?php endforeach; endif; ?>
+              <tr>
+                <td><?= htmlspecialchars($entry['date'] ?? '') ?></td>
+                <td><?= htmlspecialchars($entry['compte'] ?? '') ?></td>
+                <td><?= htmlspecialchars($entry['lieu'] ?? '') ?></td>
+                <td><?= htmlspecialchars($entry['libelle'] ?? '') ?></td>
+                <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
+                <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
+                <td class="d-flex justify-content-center gap-1">
+                  <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
+                    <a href="?page=journal&action=edit&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-warning"
+                      style="font-size: 0.75rem;">Modifier</a>
+                    <a href="?page=journal&action=delete&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-danger"
+                      onclick="return confirm('Confirmer la suppression ?');" style="font-size: 0.75rem;">Supprimer</a>
+                  <?php else: ?>
+                    —
+                  <?php endif; ?>
+                </td>
+              </tr>
+            <?php endforeach; endif; ?>
         </tbody>
+        <tfoot>
+          <tr class="table-secondary fw-semibold">
+            <td colspan="3" class="text-end">Total</td>
+            <td></td>
+            <td><?= isset($totals) ? ('$ ' . number_format($totals['debit'] ?? 0, 2)) : '' ?></td>
+            <td><?= isset($totals) ? ('$ ' . number_format($totals['credit'] ?? 0, 2)) : '' ?></td>
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
     <!-- bouton pour afficher le modal -->
     <div class="fixed-action-btn no-print">
       <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
-      <button class="btn btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#journalAddModal"
-        title="Ajouter une écriture"
-        style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">nouvelle opération</button>
+        <button class="btn btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+          title="Ajouter une écriture"
+          style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">nouvelle opération</button>
       <?php endif; ?>
     </div>
 
@@ -102,7 +112,8 @@ if (session_status() === PHP_SESSION_NONE) {
     <div class="modal fade" id="journalAddModal" tabindex="-1" aria-labelledby="journalAddLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-          <form method="post" action="?page=journal&action=add" id="journal-add-form" onsubmit="return validateJournalForm();">
+          <form method="post" action="?page=journal&action=add" id="journal-add-form"
+            onsubmit="return validateJournalForm();">
             <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
             <div class="modal-header">
               <h5 class="modal-title" id="journalAddLabel">Nouvelle écriture (partie double)</h5>
@@ -193,215 +204,223 @@ if (session_status() === PHP_SESSION_NONE) {
   </div>
   <?php require __DIR__ . '/_layout_footer.php'; ?>
   <script>
-  // Use shared AccountSearch helper
-  document.addEventListener('DOMContentLoaded', function() {
-    AccountSearch.fetchComptes().then(function() {
+    // Use shared AccountSearch helper
+    document.addEventListener('DOMContentLoaded', function () {
+      AccountSearch.fetchComptes().then(function () {
 
-      AccountSearch.createSuggestionBox({
-        inputId: 'compte_search',
-        suggestionsId: 'compte_suggestions',
-        renderItemHtml: function(c) {
-          return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>
+        AccountSearch.createSuggestionBox({
+          inputId: 'compte_search',
+          suggestionsId: 'compte_suggestions',
+          renderItemHtml: function (c) {
+            return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>
               <div class="btn-group btn-group-sm" role="group">
                 <button type="button" class="btn btn-primary" data-action="debit">Débit</button>
                 <button type="button" class="btn btn-secondary" data-action="credit">Crédit</button>
               </div>`;
-        },
-        onChoose: function(item, extra) {
-          var action = extra && extra.action;
-          if (!action) {
-            // keyboard selection: ask the user which side to assign
-            if (confirm('Affecter le compte au Débit ? OK = Débit, Annuler = Crédit')) action = 'debit';
-            else action = 'credit';
+          },
+          onChoose: function (item, extra) {
+            var action = extra && extra.action;
+            if (!action) {
+              // keyboard selection: ask the user which side to assign
+              if (confirm('Affecter le compte au Débit ? OK = Débit, Annuler = Crédit')) action = 'debit';
+              else action = 'credit';
+            }
+            assignCompteToSide(item.code, action);
           }
-          assignCompteToSide(item.code, action);
-        }
+        });
+      }).catch(console.error);
+    });
+
+    function assignCompteToSide(code, side) {
+      const acc = (window.comptesList || []).find(c => c.code === code);
+      if (!acc) return;
+      const hidden = document.getElementById('compte_' + side);
+      const display = document.getElementById('compte_' + side + '_display');
+      const intituleInput = document.getElementById('intitule_' + side + 'Input');
+      if (hidden) hidden.value = acc.code;
+      if (display) display.value = acc.code + ' — ' + (acc.label || '');
+      if (intituleInput) {
+        intituleInput.value = acc.intitule || '';
+        intituleInput.readOnly = true;
+      }
+    }
+
+    function clearCompteSide(side) {
+      const hidden = document.getElementById('compte_' + side);
+      const display = document.getElementById('compte_' + side + '_display');
+      const intituleInput = document.getElementById('intitule_' + side + 'Input');
+      if (hidden) hidden.value = '';
+      if (display) display.value = '';
+      if (intituleInput) {
+        intituleInput.value = '';
+        intituleInput.readOnly = false;
+      }
+    }
+
+    // attach clear button handlers if present
+    if (document.getElementById('compte_debit_clear')) {
+      document.getElementById('compte_debit_clear').addEventListener('click', function () {
+        clearCompteSide('debit');
       });
-    }).catch(console.error);
-  });
-
-  function assignCompteToSide(code, side) {
-    const acc = (window.comptesList || []).find(c => c.code === code);
-    if (!acc) return;
-    const hidden = document.getElementById('compte_' + side);
-    const display = document.getElementById('compte_' + side + '_display');
-    const intituleInput = document.getElementById('intitule_' + side + 'Input');
-    if (hidden) hidden.value = acc.code;
-    if (display) display.value = acc.code + ' — ' + (acc.label || '');
-    if (intituleInput) {
-      intituleInput.value = acc.intitule || '';
-      intituleInput.readOnly = true;
     }
-  }
-
-  function clearCompteSide(side) {
-    const hidden = document.getElementById('compte_' + side);
-    const display = document.getElementById('compte_' + side + '_display');
-    const intituleInput = document.getElementById('intitule_' + side + 'Input');
-    if (hidden) hidden.value = '';
-    if (display) display.value = '';
-    if (intituleInput) {
-      intituleInput.value = '';
-      intituleInput.readOnly = false;
+    if (document.getElementById('compte_credit_clear')) {
+      document.getElementById('compte_credit_clear').addEventListener('click', function () {
+        clearCompteSide('credit');
+      });
     }
-  }
 
-  // attach clear button handlers if present
-  if (document.getElementById('compte_debit_clear')) {
-    document.getElementById('compte_debit_clear').addEventListener('click', function() {
-      clearCompteSide('debit');
-    });
-  }
-  if (document.getElementById('compte_credit_clear')) {
-    document.getElementById('compte_credit_clear').addEventListener('click', function() {
-      clearCompteSide('credit');
-    });
-  }
-
-  function updateIntitule(side) {
-    // Keep for backward compatibility: if a legacy select exists, handle it; otherwise no-op
-    var select = document.getElementById('compte_' + side + 'Select');
-    var intituleInput = document.getElementById('intitule_' + side + 'Input');
-    var hiddenInput = document.getElementById('compte_' + side);
-    if (!select || !intituleInput || !hiddenInput) return;
-    var selected = select.options[select.selectedIndex];
-    if (selected && selected.value && selected.dataset.intitule) {
-      intituleInput.value = selected.dataset.intitule;
-      intituleInput.readOnly = true;
-      hiddenInput.value = selected.value;
-    } else {
-      intituleInput.value = '';
-      intituleInput.readOnly = false;
-      hiddenInput.value = '';
+    function updateIntitule(side) {
+      // Keep for backward compatibility: if a legacy select exists, handle it; otherwise no-op
+      var select = document.getElementById('compte_' + side + 'Select');
+      var intituleInput = document.getElementById('intitule_' + side + 'Input');
+      var hiddenInput = document.getElementById('compte_' + side);
+      if (!select || !intituleInput || !hiddenInput) return;
+      var selected = select.options[select.selectedIndex];
+      if (selected && selected.value && selected.dataset.intitule) {
+        intituleInput.value = selected.dataset.intitule;
+        intituleInput.readOnly = true;
+        hiddenInput.value = selected.value;
+      } else {
+        intituleInput.value = '';
+        intituleInput.readOnly = false;
+        hiddenInput.value = '';
+      }
     }
-  }
 
-  function validateJournalForm() {
-    const date = document.getElementById('date').value;
-    const compteDeb = document.getElementById('compte_debit').value.trim();
-    const compteCre = document.getElementById('compte_credit').value.trim();
-    const intituleDeb = document.getElementById('intitule_debitInput').value.trim();
-    const intituleCre = document.getElementById('intitule_creditInput').value.trim();
-    const libelle = document.getElementById('libelle').value.trim();
-    const debit = document.getElementById('debit').value;
-    const credit = document.getElementById('credit').value;
-    let errors = [];
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) errors.push('Date invalide');
-    if (compteDeb.length < 1 || compteDeb.length > 32) errors.push('Compte débit invalide');
-    if (compteCre.length < 1 || compteCre.length > 32) errors.push('Compte crédit invalide');
-    if (intituleDeb.length < 1 || intituleDeb.length > 64) errors.push('Intitulé compte débit invalide');
-    if (intituleCre.length < 1 || intituleCre.length > 64) errors.push('Intitulé compte crédit invalide');
-    if (libelle.length < 1 || libelle.length > 64) errors.push('Libellé invalide');
-    if (!debit || isNaN(debit) || parseFloat(debit) <= 0) errors.push('Débit invalide');
-    if (!credit || isNaN(credit) || parseFloat(credit) <= 0) errors.push('Crédit invalide');
-    if (!isNaN(debit) && !isNaN(credit) && Math.abs(parseFloat(debit) - parseFloat(credit)) > 0.001) errors.push(
-      'Le montant débit doit être égal au montant crédit');
-    if (errors.length) {
-      alert(errors.join('\n'));
-      return false;
+    function validateJournalForm() {
+      const date = document.getElementById('date').value;
+      const compteDeb = document.getElementById('compte_debit').value.trim();
+      const compteCre = document.getElementById('compte_credit').value.trim();
+      const intituleDeb = document.getElementById('intitule_debitInput').value.trim();
+      const intituleCre = document.getElementById('intitule_creditInput').value.trim();
+      const libelle = document.getElementById('libelle').value.trim();
+      const debit = document.getElementById('debit').value;
+      const credit = document.getElementById('credit').value;
+      let errors = [];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) errors.push('Date invalide');
+      if (compteDeb.length < 1 || compteDeb.length > 32) errors.push('Compte débit invalide');
+      if (compteCre.length < 1 || compteCre.length > 32) errors.push('Compte crédit invalide');
+      if (intituleDeb.length < 1 || intituleDeb.length > 64) errors.push('Intitulé compte débit invalide');
+      if (intituleCre.length < 1 || intituleCre.length > 64) errors.push('Intitulé compte crédit invalide');
+      if (libelle.length < 1 || libelle.length > 64) errors.push('Libellé invalide');
+      if (!debit || isNaN(debit) || parseFloat(debit) <= 0) errors.push('Débit invalide');
+      if (!credit || isNaN(credit) || parseFloat(credit) <= 0) errors.push('Crédit invalide');
+      if (!isNaN(debit) && !isNaN(credit) && Math.abs(parseFloat(debit) - parseFloat(credit)) > 0.001) errors.push(
+        'Le montant débit doit être égal au montant crédit');
+      if (errors.length) {
+        alert(errors.join('\n'));
+        return false;
+      }
+      return true;
     }
-    return true;
-  }
 
-  // AJAX submit: keep Journal modal open after successful add and reset form for the next entry
-  (function(){
-    document.addEventListener('DOMContentLoaded', function(){
-      const form = document.getElementById('journal-add-form');
-      if (!form || !window.fetch || !window.FormData) return;
-      const submitBtn = form.querySelector('button[type="submit"]');
-      function setLoading(on, text){ if(!submitBtn) return; submitBtn.disabled = on; submitBtn.innerHTML = on ? (text||'En cours...') : 'Ajouter'; }
-      form.addEventListener('submit', function(ev){
-        // let native validation show messages if invalid
-        if (!validateJournalForm()) return;
-        // prevent full-page submit when JS available
-        ev.preventDefault();
-        setLoading(true, '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>  Envoi');
-        const fd = new FormData(form);
-        fetch('?page=journal&action=add', {
-          method: 'POST',
-          body: fd,
-          credentials: 'same-origin',
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+    // AJAX submit: keep Journal modal open after successful add and reset form for the next entry
+    (function () {
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('journal-add-form');
+        if (!form || !window.fetch || !window.FormData) return;
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        function setLoading(on, text) {
+          if (!submitBtn) return;
+          submitBtn.disabled = on;
+          submitBtn.innerHTML = on ? (text || 'En cours...') : 'Ajouter';
+        }
+        form.addEventListener('submit', function (ev) {
+          // let native validation show messages if invalid
+          if (!validateJournalForm()) return;
+          // prevent full-page submit when JS available
+          ev.preventDefault();
+          setLoading(true,
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>  Envoi');
+          const fd = new FormData(form);
+          fetch('?page=journal&action=add', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            }
+          }).then(async (res) => {
+            setLoading(false);
+            const ctype = (res.headers.get('content-type') || '');
+            const isJson = ctype.indexOf('application/json') !== -1;
+            if (!res.ok) {
+              const txt = await res.text().catch(() => res.statusText);
+              throw new Error(txt || 'Erreur réseau');
+            }
+            if (!isJson) {
+              const body = await res.text().catch(() => '<no-body>');
+              const snippet = (body || '').trim().slice(0, 2000);
+              throw new Error('Réponse inattendue — serveur a renvoyé du HTML/texte:\n' + snippet);
+            }
+            return res.json();
+          }).then((json) => {
+            if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');
+            // keep modal open; reset form and focus for next entry
+            form.reset();
+            form.querySelector('input,select,textarea')?.focus();
+            // mark modal session as dirty so closing it will refresh the page
+            window.__journalDirty = true;
+            const notice = document.createElement('div');
+            notice.className = 'alert alert-success mt-3';
+            notice.textContent = 'Écriture ajoutée — prête pour la suivante.';
+            form.closest('.modal-body')?.prepend(notice);
+            setTimeout(() => notice.remove(), 2000);
+          }).catch((err) => {
+            setLoading(false);
+            alert('Échec : ' + (err && err.message ? err.message : 'Erreur lors de l\'envoi'));
+          });
+
+          // when the journal modal is closed, reload the page if entries were added during the session
+          const journalModal = document.getElementById('journalAddModal');
+          if (journalModal) {
+            journalModal.addEventListener('hidden.bs.modal', function () {
+              try {
+                if (window.__journalDirty) {
+                  window.__journalDirty = false;
+                  setTimeout(() => window.location.reload(), 150);
+                }
+              } catch (e) {
+                /* silent */
+              }
+            });
           }
-        }).then(async (res) => {
-          setLoading(false);
-          const ctype = (res.headers.get('content-type')||'');
-          const isJson = ctype.indexOf('application/json') !== -1;
-          if (!res.ok) {
-            const txt = await res.text().catch(()=>res.statusText);
-            throw new Error(txt || 'Erreur réseau');
+        });
+      });
+    })();
+
+    // Filter compte search suggestions
+    document.addEventListener('DOMContentLoaded', function () {
+      AccountSearch.fetchComptes().then(function () {
+        // if server provided a filter code, try to show label
+        var initial = document.getElementById('filter_compte').value;
+        if (initial) {
+          var found = (window.comptesList || []).find(c => c.code === initial);
+          if (found) document.getElementById('filter_compte_display').value = found.code + ' — ' + (found.label ||
+            '');
+        }
+
+        AccountSearch.createSuggestionBox({
+          inputId: 'filter_compte_display',
+          suggestionsId: 'filter_compte_suggestions',
+          renderItemHtml: function (c) {
+            return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
+          },
+          onChoose: function (item) {
+            if (!item) return;
+            document.getElementById('filter_compte_display').value = item.code + ' — ' + (item.label || '');
+            document.getElementById('filter_compte').value = item.code;
           }
-          if (!isJson) {
-            const body = await res.text().catch(()=>'<no-body>');
-            const snippet = (body || '').trim().slice(0,2000);
-            throw new Error('Réponse inattendue — serveur a renvoyé du HTML/texte:\n' + snippet);
-          }
-          return res.json();
-        }).then((json) => {
-          if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');
-          // keep modal open; reset form and focus for next entry
-          form.reset();
-          form.querySelector('input,select,textarea')?.focus();
-          // mark modal session as dirty so closing it will refresh the page
-          window.__journalDirty = true;
-          const notice = document.createElement('div');
-          notice.className = 'alert alert-success mt-3';
-          notice.textContent = 'Écriture ajoutée — prête pour la suivante.';
-          form.closest('.modal-body')?.prepend(notice);
-          setTimeout(()=> notice.remove(), 2000);
-        }).catch((err)=>{
-          setLoading(false);
-          alert('Échec : ' + (err && err.message ? err.message : 'Erreur lors de l\'envoi'));
         });
 
-        // when the journal modal is closed, reload the page if entries were added during the session
-        const journalModal = document.getElementById('journalAddModal');
-        if (journalModal) {
-          journalModal.addEventListener('hidden.bs.modal', function() {
-            try {
-              if (window.__journalDirty) {
-                window.__journalDirty = false;
-                setTimeout(() => window.location.reload(), 150);
-              }
-            } catch (e) { /* silent */ }
-          });
-        }
-      });
+        // clear hidden value if user clears display
+        document.getElementById('filter_compte_display').addEventListener('input', function () {
+          if (!this.value) document.getElementById('filter_compte').value = '';
+        });
+      }).catch(console.error);
     });
-  })();
-
-  // Filter compte search suggestions
-  document.addEventListener('DOMContentLoaded', function() {
-    AccountSearch.fetchComptes().then(function() {
-      // if server provided a filter code, try to show label
-      var initial = document.getElementById('filter_compte').value;
-      if (initial) {
-        var found = (window.comptesList || []).find(c => c.code === initial);
-        if (found) document.getElementById('filter_compte_display').value = found.code + ' — ' + (found.label ||
-          '');
-      }
-
-      AccountSearch.createSuggestionBox({
-        inputId: 'filter_compte_display',
-        suggestionsId: 'filter_compte_suggestions',
-        renderItemHtml: function(c) {
-          return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
-        },
-        onChoose: function(item) {
-          if (!item) return;
-          document.getElementById('filter_compte_display').value = item.code + ' — ' + (item.label || '');
-          document.getElementById('filter_compte').value = item.code;
-        }
-      });
-
-      // clear hidden value if user clears display
-      document.getElementById('filter_compte_display').addEventListener('input', function() {
-        if (!this.value) document.getElementById('filter_compte').value = '';
-      });
-    }).catch(console.error);
-  });
   </script>
 
 </html>

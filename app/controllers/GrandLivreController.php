@@ -7,7 +7,7 @@ class GrandLivreController extends Controller
 {
     public function delete()
     {
-        $this->requireRole(['accountant', 'manager', 'admin']);
+        $this->requireRole(['accountant', 'admin']);
         $id = $_GET['id'] ?? null;
         if ($id) {
             $model = new GrandLivreModel();
@@ -19,7 +19,7 @@ class GrandLivreController extends Controller
 
     public function edit()
     {
-        $this->requireRole(['accountant', 'manager', 'admin']);
+        $this->requireRole(['accountant', 'admin']);
         $id = $_GET['id'] ?? null;
         $model = new GrandLivreModel();
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id) {
@@ -58,10 +58,16 @@ class GrandLivreController extends Controller
             'date_fin' => $_GET['date_fin'] ?? ''
         ];
         $entries = $selected ? $model->getByCompte($selected, $filters) : [];
+        $totals = ['debit' => 0.0, 'credit' => 0.0];
+        foreach ($entries as $e) {
+            $totals['debit'] += isset($e['debit']) && is_numeric($e['debit']) ? floatval($e['debit']) : 0.0;
+            $totals['credit'] += isset($e['credit']) && is_numeric($e['credit']) ? floatval($e['credit']) : 0.0;
+        }
         $this->render('grandlivre', [
             'comptes' => $comptes,
             'selected' => $selected,
-            'entries' => $entries
+            'entries' => $entries,
+            'totals' => $totals
         ]);
     }
 

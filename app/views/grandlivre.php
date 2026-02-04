@@ -64,6 +64,13 @@ if (session_status() === PHP_SESSION_NONE) {
         </tr>
         <?php endforeach; endif; ?>
       </tbody>
+      <tfoot>
+        <tr class="table-secondary fw-semibold">
+          <td colspan="2" class="text-end">Total</td>
+          <td><?= isset($totals) ? ('$ ' . number_format($totals['debit'] ?? 0, 2)) : '' ?></td>
+          <td><?= isset($totals) ? ('$ ' . number_format($totals['credit'] ?? 0, 2)) : '' ?></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
   <script>

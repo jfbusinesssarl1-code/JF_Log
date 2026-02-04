@@ -17,9 +17,15 @@ class ReleveController extends Controller
             'date_fin' => $_GET['date_fin'] ?? ''
         ];
         $entries = $model->getFiltered($filters);
+        $totals = ['debit' => 0.0, 'credit' => 0.0];
+        foreach ($entries as $e) {
+            $totals['debit'] += isset($e['debit']) && is_numeric($e['debit']) ? floatval($e['debit']) : 0.0;
+            $totals['credit'] += isset($e['credit']) && is_numeric($e['credit']) ? floatval($e['credit']) : 0.0;
+        }
         $this->render('releve', [
             'entries' => $entries,
-            'filters' => $filters
+            'filters' => $filters,
+            'totals' => $totals
         ]);
     }
 
@@ -57,16 +63,25 @@ class ReleveController extends Controller
 
         $html = $header;
         $html .= '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Date</th><th>Lieu</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th></tr></thead><tbody>';
+        $sumD = 0.0; $sumC = 0.0;
         foreach ($entries as $e) {
+            $d = isset($e['debit']) && is_numeric($e['debit']) ? floatval($e['debit']) : 0.0;
+            $c = isset($e['credit']) && is_numeric($e['credit']) ? floatval($e['credit']) : 0.0;
+            $sumD += $d; $sumC += $c;
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($e['date'] ?? '') . '</td>';
             $html .= '<td>' . htmlspecialchars($e['lieu'] ?? '') . '</td>';
             $html .= '<td>' . htmlspecialchars($e['compte'] ?? '') . '</td>';
             $html .= '<td>' . htmlspecialchars($e['libelle'] ?? '') . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars($e['debit'] ?? '') . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars($e['credit'] ?? '') . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($d,2,'.','')) . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($c,2,'.','')) . '</td>';
             $html .= '</tr>';
         }
+        $html .= '<tr style="font-weight:700;background:#f1f3f5">';
+        $html .= '<td colspan="4">Total</td>';
+        $html .= '<td style="text-align:right">' . number_format($sumD,2,'.','') . '</td>';
+        $html .= '<td style="text-align:right">' . number_format($sumC,2,'.','') . '</td>';
+        $html .= '</tr>';
         $html .= '</tbody></table>';
 
         if ($format === 'pdf') {

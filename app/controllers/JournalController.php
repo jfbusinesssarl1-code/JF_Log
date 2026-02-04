@@ -57,50 +57,13 @@ class JournalController extends Controller
             'date_fin' => $_GET['date_fin'] ?? ''
         ];
         $entries = $model->getFiltered($filters);
-        $this->render('journal', ['entries' => $entries, 'filters' => $filters]);
-    }
-
-    // Retourne uniquement le <tbody> (utilisé pour refresh partiel via AJAX)
-    public function list_partial()
-    {
-        $this->requireRole(['accountant', 'manager', 'admin']);
-        $model = new JournalModel();
-        $filters = [
-            'compte' => $_GET['compte'] ?? '',
-            'lieu' => $_GET['lieu'] ?? '',
-            'date_debut' => $_GET['date_debut'] ?? '',
-            'date_fin' => $_GET['date_fin'] ?? ''
-        ];
-        $entries = $model->getFiltered($filters);
-        header('Content-Type: text/html; charset=utf-8');
-        header('X-Row-Count: ' . count($entries));
-        if (!empty($entries)) {
-            foreach ($entries as $entry) {
-                $id = isset($entry['_id']) ? (string) $entry['_id'] : '';
-                $date = htmlspecialchars($entry['date'] ?? '');
-                $compte = htmlspecialchars($entry['compte'] ?? '');
-                $lieu = htmlspecialchars($entry['lieu'] ?? '');
-                $libelle = htmlspecialchars($entry['libelle'] ?? '');
-                $debit = htmlspecialchars($entry['debit'] ?? '');
-                $credit = htmlspecialchars($entry['credit'] ?? '');
-                echo "<tr>\n";
-                echo "<td>$date</td>\n";
-                echo "<td>$compte</td>\n";
-                echo "<td>$lieu</td>\n";
-                echo "<td>$libelle</td>\n";
-                echo "<td>$debit</td>\n";
-                echo "<td>$credit</td>\n";
-                if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])) {
-                    echo "<td class=\"d-flex justify-content-center gap-1\"> <a href=\"?page=journal&action=edit&id=$id\" class=\"btn btn-sm btn-warning\">Modifier</a> <a href=\"?page=journal&action=delete&id=$id\" class=\"btn btn-sm btn-danger\" onclick=\"return confirm('Confirmer la suppression ?');\">Supprimer</a> </td>\n";
-                } else {
-                    echo "<td>—</td>\n";
-                }
-                echo "</tr>\n";
-            }
-        } else {
-            echo '<tr><td colspan="7" class="text-center">Aucune opération</td></tr>';
+        // compute totals (debit, credit) from the filtered entries
+        $totals = ['debit' => 0.0, 'credit' => 0.0];
+        foreach ($entries as $e) {
+            $totals['debit'] += isset($e['debit']) && is_numeric($e['debit']) ? floatval($e['debit']) : 0.0;
+            $totals['credit'] += isset($e['credit']) && is_numeric($e['credit']) ? floatval($e['credit']) : 0.0;
         }
-        exit;
+        $this->render('journal', ['entries' => $entries, 'filters' => $filters, 'totals' => $totals]);
     }
     public function add()
     {
@@ -271,16 +234,25 @@ class JournalController extends Controller
 
         $html = $header;
         $html .= '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Date</th><th>Compte</th><th>Lieu</th><th>Libellé</th><th>Débit</th><th>Crédit</th></tr></thead><tbody>';
+        $sumD = 0.0; $sumC = 0.0;
         foreach ($items as $e) {
+            $d = isset($e['debit']) && is_numeric($e['debit']) ? floatval($e['debit']) : 0.0;
+            $c = isset($e['credit']) && is_numeric($e['credit']) ? floatval($e['credit']) : 0.0;
+            $sumD += $d; $sumC += $c;
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($e['date'] ?? '') . '</td>';
             $html .= '<td>' . htmlspecialchars($e['compte'] ?? '') . '</td>';
             $html .= '<td>' . htmlspecialchars($e['lieu'] ?? '') . '</td>';
             $html .= '<td>' . htmlspecialchars($e['libelle'] ?? '') . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars($e['debit'] ?? '') . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars($e['credit'] ?? '') . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($d,2,'.','')) . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($c,2,'.','')) . '</td>';
             $html .= '</tr>';
         }
+        $html .= '<tr style="font-weight:700;background:#f1f3f5">';
+        $html .= '<td colspan="4">Total</td>';
+        $html .= '<td style="text-align:right">' . number_format($sumD,2,'.','') . '</td>';
+        $html .= '<td style="text-align:right">' . number_format($sumC,2,'.','') . '</td>';
+        $html .= '</tr>';
         $html .= '</tbody></table>';
 
         if ($format === 'pdf') {

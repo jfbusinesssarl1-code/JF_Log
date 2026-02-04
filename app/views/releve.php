@@ -35,7 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
           value="<?= htmlspecialchars($filters['date_fin'] ?? '') ?>"></div>
       <div class="col-md-2">
         <button class="btn btn-secondary w-100" type="submit">Filtrer</button>
-        <a class="btn btn-outline-secondary w-100 mt-2"
+        <a class="btn btn-outline-secondary w-100 mt-2 position-fixed" style="max-width:150px; bottom:30px; right: 2%;"
           href="?page=releve&action=export&format=pdf&compte=<?= urlencode($filters['compte'] ?? '') ?>&lieu=<?= urlencode($filters['lieu'] ?? '') ?>&date_debut=<?= urlencode($filters['date_debut'] ?? '') ?>&date_fin=<?= urlencode($filters['date_fin'] ?? '') ?>">Exporter
           PDF</a>
       </div>
@@ -56,45 +56,62 @@ if (session_status() === PHP_SESSION_NONE) {
         <tbody>
           <?php if (!empty($entries)):
             foreach ($entries as $e): ?>
-              <tr>
-                <td><?= htmlspecialchars($e['date'] ?? '') ?></td>
-                <td><?= htmlspecialchars($e['lieu'] ?? '') ?></td>
-                <td><?= htmlspecialchars($e['compte'] ?? '') ?></td>
-                <td><?= htmlspecialchars($e['libelle'] ?? '') ?></td>
-                <td><?= ($e['debit'] !== '' ? '$ ' . htmlspecialchars($e['debit']) : '') ?></td>
-                <td><?= ($e['credit'] !== '' ? '$ ' . htmlspecialchars($e['credit']) : '') ?></td>
-              </tr>
-            <?php endforeach; else: ?>
-            <tr>
-              <td colspan="6" class="text-center">Aucune donnée</td>
-            </tr>
+          <tr>
+            <td><?= htmlspecialchars($e['date'] ?? '') ?></td>
+            <td><?= htmlspecialchars($e['lieu'] ?? '') ?></td>
+            <td><?= htmlspecialchars($e['compte'] ?? '') ?></td>
+            <td><?= htmlspecialchars($e['libelle'] ?? '') ?></td>
+            <td><?= ($e['debit'] !== '' ? '$ ' . htmlspecialchars($e['debit']) : '') ?></td>
+            <td><?= ($e['credit'] !== '' ? '$ ' . htmlspecialchars($e['credit']) : '') ?></td>
+          </tr>
+          <?php endforeach; else: ?>
+          <tr>
+            <td colspan="6" class="text-center">Aucune donnée</td>
+          </tr>
           <?php endif; ?>
         </tbody>
+        <tfoot>
+          <tr class="table-secondary fw-semibold">
+            <td colspan="4" class="text-end">Total</td>
+            <td><?= isset($totals) ? ('$ ' . number_format($totals['debit'] ?? 0, 2)) : '' ?></td>
+            <td><?= isset($totals) ? ('$ ' . number_format($totals['credit'] ?? 0, 2)) : '' ?></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>
 </body>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    AccountSearch.fetchComptes().then(function () {
-      // prefill display if server provided value
-      var initial = document.getElementById('filter_compte_releve').value;
-      if (initial) {
-        var found = (window.comptesList || []).find(c => c.code === initial);
-        if (found) document.getElementById('filter_compte_releve_display').value = found.code + ' — ' + (found.label || '');
+document.addEventListener('DOMContentLoaded', function() {
+  AccountSearch.fetchComptes().then(function() {
+    // prefill display if server provided value
+    var initial = document.getElementById('filter_compte_releve').value;
+    if (initial) {
+      var found = (window.comptesList || []).find(c => c.code === initial);
+      if (found) document.getElementById('filter_compte_releve_display').value = found.code + ' — ' + (found
+        .label || '');
+    }
+
+    AccountSearch.createSuggestionBox({
+      inputId: 'filter_compte_releve_display',
+      suggestionsId: 'filter_compte_releve_suggestions',
+      renderItemHtml: function(c) {
+        return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
+      },
+      onChoose: function(item) {
+        if (!item) return;
+        document.getElementById('filter_compte_releve_display').value = item.code + ' — ' + (item.label ||
+          '');
+        document.getElementById('filter_compte_releve').value = item.code;
       }
+    });
 
-      AccountSearch.createSuggestionBox({
-        inputId: 'filter_compte_releve_display',
-        suggestionsId: 'filter_compte_releve_suggestions',
-        renderItemHtml: function (c) { return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`; },
-        onChoose: function (item) { if (!item) return; document.getElementById('filter_compte_releve_display').value = item.code + ' — ' + (item.label || ''); document.getElementById('filter_compte_releve').value = item.code; }
-      });
-
-      document.getElementById('filter_compte_releve_display').addEventListener('input', function () { if (!this.value) document.getElementById('filter_compte_releve').value = ''; });
-    }).catch(console.error);
-  });
+    document.getElementById('filter_compte_releve_display').addEventListener('input', function() {
+      if (!this.value) document.getElementById('filter_compte_releve').value = '';
+    });
+  }).catch(console.error);
+});
 </script>
 
 </html>
