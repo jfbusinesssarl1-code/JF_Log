@@ -4,23 +4,8 @@
     if (window.comptesList) return window.comptesList;
     try {
       const r = await fetch('?page=api&action=comptes');
-      if (!r.ok) {
-        const txt = await r.text().catch(()=>r.statusText || '');
-        throw new Error('API error ' + r.status + ' — ' + String(txt).slice(0,200));
-      }
       const comptes = await r.json();
       window.comptesList = comptes || [];
-
-      // If server returned 0 comptes, surface a console hint with diagnostic headers
-      if (!window.comptesList.length) {
-        try {
-          const exists = r.headers.get('X-Plan-Exists');
-          const readable = r.headers.get('X-Plan-Readable');
-          const count = r.headers.get('X-Plan-Count');
-          console.warn('AccountSearch: comptes list is empty — X-Plan-Exists=' + exists + ' X-Plan-Readable=' + readable + ' X-Plan-Count=' + count);
-        } catch (er) { /* ignore */ }
-      }
-
       return window.comptesList;
     } catch (e) {
       console.error('AccountSearch.fetchComptes error', e);
@@ -49,20 +34,7 @@
         const div = document.createElement('div');
         div.className = 'list-group-item d-flex justify-content-between align-items-center';
         div.dataset.index = i;
-        // special meta rows (server empty / no-results) => render helpful UI
-        if (c && c._meta) {
-          if (c._meta === 'no-accounts') {
-            div.classList.add('text-muted');
-            div.innerHTML = '<div>Aucun compte trouvé — le serveur n\'a renvoyé aucune donnée.</div><div><button class="btn btn-sm btn-outline-secondary" data-action="retry">Réessayer</button></div>';
-          } else if (c._meta === 'no-results') {
-            div.classList.add('text-muted');
-            div.innerHTML = '<div>Aucun résultat pour cette recherche</div>';
-          } else {
-            div.innerHTML = opts.renderItemHtml(c);
-          }
-        } else {
-          div.innerHTML = opts.renderItemHtml(c);
-        }
+        div.innerHTML = opts.renderItemHtml(c);
         suggestions.appendChild(div);
       });
       suggestions.style.display = currentResults.length ? '' : 'none';
@@ -78,17 +50,12 @@
         // To avoid freezing the UI in pathological cases we cap at 1000 items.
         const results = (comptes || []).slice(0, 1000);
         console.log('AccountSearch: showing top', results.length, 'items for empty query');
-        if (!results.length) {
-          // show helpful retry / info row when server returned no accounts
-          render([{ _meta: 'no-accounts' }]);
-        } else {
-          render(results);
-        }
+        render(results);
         return;
       }
       const results = comptes.filter(c => (c.code||'').toLowerCase().includes(q) || (c.label||'').toLowerCase().includes(q)).slice(0,1000);
       console.log('AccountSearch: found', results.length, 'results for query', q);
-      if (!results.length) render([{ _meta: 'no-results' }]); else render(results);
+      render(results);
     }
 
     input.addEventListener('input', debounce(onInput, 180));

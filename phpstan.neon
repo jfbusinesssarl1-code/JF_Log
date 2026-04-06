@@ -1,0 +1,11 @@
+parameters:
+    level: 5
+    paths:
+        - app/
+        - public/
+    ignoreErrors:
+        - '#Unknown class MongoDB\\BSON\\ObjectId#'
+        - '#Unknown class MongoDB\\BSON\\UTCDateTime#'
+        - '#Unknown class MongoDB\\BSON\\Regex#'
+    bootstrapFiles:
+        - vendor/autoload.php

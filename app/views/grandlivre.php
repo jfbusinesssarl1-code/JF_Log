@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
-  session_start();
+  // Session started in front controller (public/index.php)
 }
 ?>
 <!DOCTYPE html>
@@ -36,13 +36,27 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
         <div class="col-md-2">
           <button class="btn btn-secondary w-100" type="submit">Filtrer</button>
-          <a class="btn btn-outline-secondary w-100 mt-2 position-fixed"
-            style="max-width:150px; bottom:30px; right: 2%;"
-            href="?page=grandlivre&action=export&compte=<?= urlencode($selected) ?>&date_debut=<?= htmlspecialchars($_GET['date_debut'] ?? '') ?>&date_fin=<?= htmlspecialchars($_GET['date_fin'] ?? '') ?>">Exporter
-            PDF</a>
         </div>
       </div>
     </form>
+
+    <!-- Export PDF Button - Desktop and Mobile -->
+    <div class="no-print">
+      <!-- Desktop version -->
+      <a class="btn btn-export-pdf d-none d-md-inline-flex" 
+        href="?page=grandlivre&action=export&<?= http_build_query(['compte' => $selected, 'date_debut' => $_GET['date_debut'] ?? '', 'date_fin' => $_GET['date_fin'] ?? '']) ?>"
+        style="position: fixed; bottom: 20px; right: 2%; z-index: 1070;">
+        <i class="bi bi-file-earmark-pdf me-2"></i> Exporter PDF
+      </a>
+      <!-- Mobile version -->
+      <a class="btn btn-export-pdf-mobile d-md-none" 
+        href="?page=grandlivre&action=export&<?= http_build_query(['compte' => $selected, 'date_debut' => $_GET['date_debut'] ?? '', 'date_fin' => $_GET['date_fin'] ?? '']) ?>"
+        style="position: fixed; bottom: 80px; right: 16px; z-index: 1070;"
+        title="Exporter PDF">
+        <i class="bi bi-file-earmark-pdf"></i>
+      </a>
+    </div>
+
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -56,13 +70,13 @@ if (session_status() === PHP_SESSION_NONE) {
       <tbody>
         <?php if (!empty($entries)):
           foreach ($entries as $entry): ?>
-        <tr>
-          <td><?= htmlspecialchars($entry['date'] ?? '') ?></td>
-          <td><?= htmlspecialchars($entry['libelle'] ?? '') ?></td>
-          <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
-          <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
-        </tr>
-        <?php endforeach; endif; ?>
+            <tr>
+              <td><?= htmlspecialchars($entry['date'] ?? '') ?></td>
+              <td><?= htmlspecialchars($entry['libelle'] ?? '') ?></td>
+              <td><?= ($entry['debit'] !== '' ? '$ ' . htmlspecialchars($entry['debit']) : '') ?></td>
+              <td><?= ($entry['credit'] !== '' ? '$ ' . htmlspecialchars($entry['credit']) : '') ?></td>
+            </tr>
+          <?php endforeach; endif; ?>
       </tbody>
       <tfoot>
         <tr class="table-secondary fw-semibold">
@@ -74,38 +88,38 @@ if (session_status() === PHP_SESSION_NONE) {
     </table>
   </div>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    AccountSearch.fetchComptes().then(function() {
-      // add hidden input for submission
-      var parent = document.getElementById('compte_grandlivre').parentNode;
-      var hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.id = 'compte_grandlivre_code';
-      hidden.name = 'compte';
-      hidden.value = document.getElementById('compte_grandlivre').value || '';
-      parent.appendChild(hidden);
-      // prefill display
-      if (hidden.value) {
-        var found = (window.comptesList || []).find(c => c.code === hidden.value);
-        if (found) document.getElementById('compte_grandlivre').value = found.code + ' — ' + (found.label ||
-          '');
-      }
-
-      AccountSearch.createSuggestionBox({
-        inputId: 'compte_grandlivre',
-        suggestionsId: 'compte_grandlivre_suggestions',
-        renderItemHtml: function(c) {
-          return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
-        },
-        onChoose: function(item) {
-          if (!item) return;
-          document.getElementById('compte_grandlivre').value = item.code + ' — ' + (item.label || '');
-          document.getElementById('compte_grandlivre_code').value = item.code;
-          document.getElementById('grandlivreForm').submit();
+    document.addEventListener('DOMContentLoaded', function () {
+      AccountSearch.fetchComptes().then(function () {
+        // add hidden input for submission
+        var parent = document.getElementById('compte_grandlivre').parentNode;
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = 'compte_grandlivre_code';
+        hidden.name = 'compte';
+        hidden.value = document.getElementById('compte_grandlivre').value || '';
+        parent.appendChild(hidden);
+        // prefill display
+        if (hidden.value) {
+          var found = (window.comptesList || []).find(c => c.code === hidden.value);
+          if (found) document.getElementById('compte_grandlivre').value = found.code + ' — ' + (found.label ||
+            '');
         }
-      });
-    }).catch(console.error);
-  });
+
+        AccountSearch.createSuggestionBox({
+          inputId: 'compte_grandlivre',
+          suggestionsId: 'compte_grandlivre_suggestions',
+          renderItemHtml: function (c) {
+            return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
+          },
+          onChoose: function (item) {
+            if (!item) return;
+            document.getElementById('compte_grandlivre').value = item.code + ' — ' + (item.label || '');
+            document.getElementById('compte_grandlivre_code').value = item.code;
+            document.getElementById('grandlivreForm').submit();
+          }
+        });
+      }).catch(console.error);
+    });
   </script>
   <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>

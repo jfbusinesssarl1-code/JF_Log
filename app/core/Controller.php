@@ -11,7 +11,8 @@ class Controller
 
     protected function requireAuth()
     {
-        session_start();
+        if (session_status() !== PHP_SESSION_ACTIVE)
+            session_start();
         if (empty($_SESSION['user'])) {
             header('Location: ?page=login');
             exit;
@@ -24,7 +25,8 @@ class Controller
      */
     protected function requireRole($allowedRoles = [])
     {
-        session_start();
+        if (session_status() !== PHP_SESSION_ACTIVE)
+            session_start();
 
         // Vérifier l'authentification d'abord
         if (empty($_SESSION['user'])) {

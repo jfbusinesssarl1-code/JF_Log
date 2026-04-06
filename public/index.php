@@ -9,8 +9,12 @@ if (file_exists(filename: $autoload)) {
     require_once $autoload;
 }
 
-// Simple router
-$page = $_GET['page'] ?? 'login';
+// Start session early to avoid "headers already sent" warnings from views
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$page = $_GET['page'] ?? 'home';
 $action = $_GET['action'] ?? '';
 
 // Routes API
@@ -107,6 +111,16 @@ switch ($page) {
             $controller->index();
         }
         break;
+    case 'bilan':
+        $controller = new App\Controllers\BilanController();
+        if ($action === 'initial') {
+            $controller->initial();
+        } elseif ($action === 'view_copy') {
+            $controller->viewCopy();
+        } else {
+            $controller->index();
+        }
+        break;
     case 'releve':
         $controller = new App\Controllers\ReleveController();
         if ($action === 'export') {
@@ -114,6 +128,61 @@ switch ($page) {
         } else {
             $controller->index();
         }
+        break;
+    case 'payroll':
+        $controller = new App\Controllers\PayrollController();
+        if ($action === 'sites') {
+            $controller->sites();
+        } elseif ($action === 'createSite') {
+            $controller->createSite();
+        } elseif ($action === 'editSite') {
+            $controller->editSite();
+        } elseif ($action === 'siteDetail') {
+            $controller->siteDetail();
+        } elseif ($action === 'workers') {
+            $controller->workers();
+        } elseif ($action === 'createWorker') {
+            $controller->createWorker();
+        } elseif ($action === 'editWorker') {
+            $controller->editWorker();
+        } elseif ($action === 'deleteWorker') {
+            $controller->deleteWorker();
+        } elseif ($action === 'importWorkers') {
+            $controller->importWorkers();
+        } elseif ($action === 'salaryConfig') {
+            $controller->salaryConfig();
+        } elseif ($action === 'attendance') {
+            $controller->attendance();
+        } elseif ($action === 'payslip') {
+            $controller->payslip();
+        } elseif ($action === 'savePayslip') {
+            $controller->savePayslip();
+        } elseif ($action === 'exportPayslipPDF') {
+            $controller->exportPayslipPDF();
+        } elseif ($action === 'exportPresencePDF') {
+            $controller->exportPresencePDF();
+        } elseif ($action === 'payslips') {
+            $controller->payslips();
+        } elseif ($action === 'archivePayslip') {
+            $controller->archivePayslip();
+        } elseif ($action === 'unarchivePayslip') {
+            $controller->unarchivePayslip();
+        } elseif ($action === 'deletePayslip') {
+            $controller->deletePayslip();
+        } elseif ($action === 'weeklyReportSynthesis') {
+            $controller->weeklyReportSynthesis();
+        } elseif ($action === 'exportWeeklySynthesisPDF') {
+            $controller->exportWeeklySynthesisPDF();
+        } else {
+            $controller->sites();
+        }
+        break;
+    case 'admin':
+        $controller = new App\Controllers\AdminController();
+        $controller->index();
+        break;
+    case 'home':
+        (new App\Controllers\HomeController())->index();
         break;
     default:
         echo 'Page not found';

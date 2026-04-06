@@ -67,7 +67,7 @@ Accédez à : http://localhost:8000
 - 📔 **Journal Comptable** : Gestion des écritures (partie double)
 - 📊 **Grand Livre** : Consultation des comptes
 - ⚖️ **Balance** : Vérification des débits/crédits
-- 📦 **Fiche de Stock** : Gestion des inventaires
+- � **Fiche de Stock** : Gestion des inventaires
 - 📋 **Relevé** : Consultation des opérations filtrées
 - �️ **Exports** : Tous les exports sont désormais au format **PDF**. Pour des exports serveur fiables, installez `mpdf/mpdf` :
   ```bash

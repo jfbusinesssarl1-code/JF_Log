@@ -1,0 +1,36 @@
+# Configuration pour augmenter les limites d'upload
+# Cette configuration remplace les valeurs par défaut de PHP
+
+<FilesMatch "\.php$">
+    # Limite de taille de POST (par défaut 8M) → 3M
+    php_value post_max_size 3M
+    
+    # Limite de taille d'upload (par défaut 2M) → 3M
+    php_value upload_max_filesize 3M
+    
+    # Timeout pour upload (par défaut 300s) → 600s
+    php_value max_input_time 600
+    
+    # Timeout d'exécution (par défaut 30s) → 600s
+    php_value max_execution_time 600
+    
+    # Mémoire disponible (par défaut 128M) → 256M
+    php_value memory_limit 256M
+</FilesMatch>
+
+# Fallback pour différentes versions PHP
+<IfModule mod_php.c>
+    php_value post_max_size 3M
+    php_value upload_max_filesize 3M
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_value post_max_size 3M
+    php_value upload_max_filesize 3M
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_value post_max_size 3M
+    php_value upload_max_filesize 3M
+</IfModule>
+

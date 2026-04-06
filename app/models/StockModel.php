@@ -3,6 +3,7 @@ namespace App\Models;
 
 use App\Core\Model;
 use MongoDB\BSON\ObjectId;
+use App\Helpers\PaginationHelper;
 
 class StockModel extends Model
 {
@@ -16,6 +17,7 @@ class StockModel extends Model
         try {
             $this->collection->createIndex(['compte' => 1, 'date' => 1]);
             $this->collection->createIndex(['lieu' => 1]);
+            $this->collection->createIndex(['created_at' => -1]);
         } catch (\Throwable $e) {}
     }
 
@@ -29,6 +31,9 @@ class StockModel extends Model
         } else {
             $data['date'] = (new \DateTime())->format('Y-m-d');
         }
+
+        // ajouter le timestamp d'enregistrement
+        $data['created_at'] = date('Y-m-d H:i:s');
 
         // calculer prix global si PU fourni
         if (isset($data['quantite']) && isset($data['pu'])) {
@@ -141,6 +146,57 @@ class StockModel extends Model
         return $this->collection->find($query, ['sort' => ['date' => 1]])->toArray();
     }
 
+    public function getFilteredWithPagination($filters = [], $page = 1, $itemsPerPage = 20)
+    {
+        $query = [];
+
+        // Dates en format Y-m-d -> comparaison lexicographique fonctionne
+        if (!empty($filters['date_debut']) || !empty($filters['date_fin'])) {
+            $dateQuery = [];
+            if (!empty($filters['date_debut'])) {
+                $d = \DateTime::createFromFormat('Y-m-d', $filters['date_debut']);
+                if ($d)
+                    $dateQuery['$gte'] = $d->format('Y-m-d');
+            }
+            if (!empty($filters['date_fin'])) {
+                $d2 = \DateTime::createFromFormat('Y-m-d', $filters['date_fin']);
+                if ($d2)
+                    $dateQuery['$lte'] = $d2->format('Y-m-d');
+            }
+            if (!empty($dateQuery))
+                $query['date'] = $dateQuery;
+        }
+
+        if (!empty($filters['compte_filtre'])) {
+            $val = $filters['compte_filtre'];
+            $query['compte'] = ['$regex' => $val, '$options' => 'i'];
+        }
+
+        if (!empty($filters['lieu'])) {
+            $query['lieu'] = ['$regex' => $filters['lieu'], '$options' => 'i'];
+        }
+
+        // Initialiser la pagination
+        $pagination = new PaginationHelper($page, $itemsPerPage);
+
+        // Compter le nombre total d'éléments
+        $totalCount = $this->collection->countDocuments($query);
+        $pagination->setTotalItems($totalCount);
+
+        // Récupérer les éléments pour la page actuelle
+        $options = [
+            'sort' => ['date' => 1],
+            'skip' => $pagination->getOffset(),
+            'limit' => $pagination->getLimit()
+        ];
+        $items = $this->collection->find($query, $options)->toArray();
+
+        return [
+            'items' => $items,
+            'pagination' => $pagination
+        ];
+    }
+
     public function getLastByCompte($compte)
     {
         $cursor = $this->collection->find(['compte' => $compte], ['sort' => ['date' => -1], 'limit' => 1])->toArray();
@@ -250,5 +306,10 @@ class StockModel extends Model
     {
         // Intentionnellement vide: le journal n'alimente pas directement la fiche de stock ici.
         // Cette méthode existe pour éviter une erreur si elle est appelée.
+    }
+
+    public function countDocuments($query = [])
+    {
+        return $this->collection->countDocuments($query);
     }
 }

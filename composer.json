@@ -2,7 +2,10 @@
     "require": {
         "mongodb/mongodb": "^2.1",
         "phpoffice/phpspreadsheet": "^5.4",
-        "mpdf/mpdf": "^8.2"
+        "mpdf/mpdf": "^8.2",
+        "spatie/image-optimizer": "^1.7",
+        "intervention/image": "^3.0",
+        "tecnickcom/tcpdf": "^6.11"
     },
     "autoload": {
         "psr-4": {

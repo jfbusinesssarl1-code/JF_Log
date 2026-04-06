@@ -14,16 +14,22 @@ class BalanceController extends Controller
             'date_debut' => $_GET['date_debut'] ?? '',
             'date_fin' => $_GET['date_fin'] ?? ''
         ];
-        $balances = $model->getBalance($filters);
-        $totals = ['debit' => 0.0, 'credit' => 0.0, 'solde' => 0.0];
-        foreach ($balances as $b) {
-            $d = isset($b['debit']) && is_numeric($b['debit']) ? floatval($b['debit']) : 0.0;
-            $c = isset($b['credit']) && is_numeric($b['credit']) ? floatval($b['credit']) : 0.0;
-            $totals['debit'] += $d;
-            $totals['credit'] += $c;
-            $totals['solde'] += ($d - $c);
-        }
-        $this->render('balance', ['balances' => $balances, 'totals' => $totals]);
+
+        $itemsPerPage = 20;
+
+        // Récupérer d'abord la pagination pour déterminer la dernière page si nécessaire
+        $initial = $model->getBalanceWithPagination($filters, 1, $itemsPerPage);
+        $totalPages = $initial['pagination']->getTotalPages() ?: 1;
+
+        $page = isset($_GET['page_num']) ? (int) $_GET['page_num'] : max(1, $totalPages);
+
+        $result = $model->getBalanceWithPagination($filters, $page, $itemsPerPage);
+        $balances = $result['balances'];
+        $pagination = $result['pagination'];
+
+        $totals = $model->getTotals($filters);
+
+        $this->render('balance', ['balances' => $balances, 'totals' => $totals, 'pagination' => $pagination, 'filters' => $filters]);
     }
 
     public function export()
@@ -58,24 +64,42 @@ class BalanceController extends Controller
         $header = \App\Helpers\PdfHelper::renderHeader('Balance');
 
         $html = $header;
+
+        // Afficher les filtres actifs si présents
+        $activeFilters = [];
+        if (!empty($filters['date_debut']))
+            $activeFilters[] = 'Depuis: ' . htmlspecialchars($filters['date_debut']);
+        if (!empty($filters['date_fin']))
+            $activeFilters[] = 'Jusqu\'au: ' . htmlspecialchars($filters['date_fin']);
+        if (!empty($filters['compte']))
+            $activeFilters[] = 'Compte: ' . htmlspecialchars($filters['compte']);
+
+        if (!empty($activeFilters)) {
+            $html .= '<div style="background:#f8f9fa;padding:8px;margin-bottom:12px;border:1px solid #dee2e6;border-radius:4px;">';
+            $html .= '<strong>Filtres appliqués:</strong> ' . implode(' | ', $activeFilters);
+            $html .= '</div>';
+        }
+
         $html .= '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Compte</th><th>Débit</th><th>Crédit</th><th>Solde</th></tr></thead><tbody>';
-        $sumD = 0.0; $sumC = 0.0;
+        $sumD = 0.0;
+        $sumC = 0.0;
         foreach ($balances as $b) {
             $d = isset($b['debit']) && is_numeric($b['debit']) ? floatval($b['debit']) : 0.0;
             $c = isset($b['credit']) && is_numeric($b['credit']) ? floatval($b['credit']) : 0.0;
-            $sumD += $d; $sumC += $c;
+            $sumD += $d;
+            $sumC += $c;
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($b['_id'] ?? '') . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($d,2,'.','')) . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($c,2,'.','')) . '</td>';
-            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format(($d - $c),2,'.','')) . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($d, 2, '.', '')) . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format($c, 2, '.', '')) . '</td>';
+            $html .= '<td style="text-align:right">' . htmlspecialchars(number_format(($d - $c), 2, '.', '')) . '</td>';
             $html .= '</tr>';
         }
         $html .= '<tr style="font-weight:700;background:#f1f3f5">';
         $html .= '<td>Total</td>';
-        $html .= '<td style="text-align:right">' . number_format($sumD,2,'.','') . '</td>';
-        $html .= '<td style="text-align:right">' . number_format($sumC,2,'.','') . '</td>';
-        $html .= '<td style="text-align:right">' . number_format(($sumD - $sumC),2,'.','') . '</td>';
+        $html .= '<td style="text-align:right">' . number_format($sumD, 2, '.', '') . '</td>';
+        $html .= '<td style="text-align:right">' . number_format($sumC, 2, '.', '') . '</td>';
+        $html .= '<td style="text-align:right">' . number_format(($sumD - $sumC), 2, '.', '') . '</td>';
         $html .= '</tbody></table>';
 
         if ($format === 'pdf') {

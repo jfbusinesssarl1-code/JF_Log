@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
-  session_start();
+  // Session started in front controller (public/index.php)
 }
 ?>
 <!DOCTYPE html>
@@ -32,11 +32,26 @@ if (session_status() === PHP_SESSION_NONE) {
           value="<?= htmlspecialchars($_GET['date_fin'] ?? '') ?>"></div>
       <div class="col-md-2">
         <button class="btn btn-secondary w-100" type="submit">Filtrer</button>
-        <a class="btn btn-outline-secondary w-100 mt-2 position-fixed" style="max-width:150px; bottom:30px; right: 2%;"
-          href="?page=balance&action=export&format=pdf&compte=<?= urlencode($_GET['compte'] ?? '') ?>&date_debut=<?= urlencode($_GET['date_debut'] ?? '') ?>&date_fin=<?= urlencode($_GET['date_fin'] ?? '') ?>">Exporter
-          PDF</a>
       </div>
     </form>
+
+    <!-- Export PDF Button - Desktop and Mobile -->
+    <div class="no-print">
+      <!-- Desktop version -->
+      <a class="btn btn-export-pdf d-none d-md-inline-flex" 
+        href="?page=balance&action=export&format=pdf&<?= http_build_query($filters) ?>"
+        style="position: fixed; bottom: 20px; right: 2%; z-index: 1070;">
+        <i class="bi bi-file-earmark-pdf me-2"></i> Exporter PDF
+      </a>
+      <!-- Mobile version -->
+      <a class="btn btn-export-pdf-mobile d-md-none" 
+        href="?page=balance&action=export&format=pdf&<?= http_build_query($filters) ?>"
+        style="position: fixed; bottom: 80px; right: 16px; z-index: 1070;"
+        title="Exporter PDF">
+        <i class="bi bi-file-earmark-pdf"></i>
+      </a>
+    </div>
+
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -49,13 +64,13 @@ if (session_status() === PHP_SESSION_NONE) {
       <tbody>
         <?php if (!empty($balances)):
           foreach ($balances as $b): ?>
-        <tr>
-          <td><?= htmlspecialchars($b['_id'] ?? '') ?></td>
-          <td><?= '$ ' . htmlspecialchars($b['debit'] ?? 0) ?></td>
-          <td><?= '$ ' . htmlspecialchars($b['credit'] ?? 0) ?></td>
-          <td><?= '$ ' . htmlspecialchars(($b['debit'] ?? 0) - ($b['credit'] ?? 0)) ?></td>
-        </tr>
-        <?php endforeach; endif; ?>
+            <tr>
+              <td><?= htmlspecialchars($b['_id'] ?? '') ?></td>
+              <td><?= '$ ' . htmlspecialchars($b['debit'] ?? 0) ?></td>
+              <td><?= '$ ' . htmlspecialchars($b['credit'] ?? 0) ?></td>
+              <td><?= '$ ' . htmlspecialchars(($b['debit'] ?? 0) - ($b['credit'] ?? 0)) ?></td>
+            </tr>
+          <?php endforeach; endif; ?>
       </tbody>
       <tfoot>
         <tr class="table-secondary fw-semibold">
@@ -66,34 +81,90 @@ if (session_status() === PHP_SESSION_NONE) {
         </tr>
       </tfoot>
     </table>
+    <!-- Pagination -->
+    <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+      <nav aria-label="Pagination" class="mt-4 mb-4">
+        <ul class="pagination justify-content-center">
+          <li class="page-item disabled">
+            <span class="page-link"><?= htmlspecialchars($pagination->getDisplayMessage()) ?></span>
+          </li>
+          <?php $fcomp = urlencode($filters['compte'] ?? ($_GET['compte'] ?? ''));
+          $fd1 = urlencode($filters['date_debut'] ?? ($_GET['date_debut'] ?? ''));
+          $fd2 = urlencode($filters['date_fin'] ?? ($_GET['date_fin'] ?? '')); ?>
+          <?php if ($pagination->hasPreviousPage()): ?>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=balance&page_num=1&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Première"><span aria-hidden="true">&laquo;&laquo;</span></a>
+            </li>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=balance&page_num=<?= $pagination->getPreviousPage() ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Précédent"><span aria-hidden="true">&laquo;</span></a>
+            </li>
+          <?php else: ?>
+            <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+          <?php endif; ?>
+
+          <?php foreach ($pagination->getPageNumbers(2) as $pageNum): ?>
+            <?php if ($pageNum === '...'): ?>
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+            <?php elseif ($pageNum == $pagination->getCurrentPage()): ?>
+              <li class="page-item active"><span class="page-link"><?= $pageNum ?></span></li>
+            <?php else: ?>
+              <li class="page-item"><a class="page-link"
+                  href="?page=balance&page_num=<?= $pageNum ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"><?= $pageNum ?></a>
+              </li>
+            <?php endif; ?>
+          <?php endforeach; ?>
+
+          <?php if ($pagination->hasNextPage()): ?>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=balance&page_num=<?= $pagination->getNextPage() ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Suivant"><span aria-hidden="true">&raquo;</span></a>
+            </li>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=balance&page_num=<?= $pagination->getTotalPages() ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Dernière"><span aria-hidden="true">&raquo;&raquo;</span></a>
+            </li>
+          <?php else: ?>
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
+          <?php endif; ?>
+        </ul>
+      </nav>
+    <?php endif; ?>
   </div>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    AccountSearch.fetchComptes().then(function() {
-      var initial = document.getElementById('filter_compte_balance').value;
-      if (initial) {
-        var found = (window.comptesList || []).find(c => c.code === initial);
-        if (found) document.getElementById('filter_compte_balance_display').value = found.code + ' — ' + (found
-          .label || '');
-      }
-      AccountSearch.createSuggestionBox({
-        inputId: 'filter_compte_balance_display',
-        suggestionsId: 'filter_compte_balance_suggestions',
-        renderItemHtml: function(c) {
-          return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
-        },
-        onChoose: function(item) {
-          if (!item) return;
-          document.getElementById('filter_compte_balance_display').value = item.code + ' — ' + (item
+    document.addEventListener('DOMContentLoaded', function () {
+      AccountSearch.fetchComptes().then(function () {
+        var initial = document.getElementById('filter_compte_balance').value;
+        if (initial) {
+          var found = (window.comptesList || []).find(c => c.code === initial);
+          if (found) document.getElementById('filter_compte_balance_display').value = found.code + ' — ' + (found
             .label || '');
-          document.getElementById('filter_compte_balance').value = item.code;
         }
-      });
-      document.getElementById('filter_compte_balance_display').addEventListener('input', function() {
-        if (!this.value) document.getElementById('filter_compte_balance').value = '';
-      });
-    }).catch(console.error);
-  });
+        AccountSearch.createSuggestionBox({
+          inputId: 'filter_compte_balance_display',
+          suggestionsId: 'filter_compte_balance_suggestions',
+          renderItemHtml: function (c) {
+            return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
+          },
+          onChoose: function (item) {
+            if (!item) return;
+            document.getElementById('filter_compte_balance_display').value = item.code + ' — ' + (item
+              .label || '');
+            document.getElementById('filter_compte_balance').value = item.code;
+          }
+        });
+        document.getElementById('filter_compte_balance_display').addEventListener('input', function () {
+          if (!this.value) document.getElementById('filter_compte_balance').value = '';
+        });
+      }).catch(console.error);
+    });
   </script>
   <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>

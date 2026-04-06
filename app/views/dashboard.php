@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
-  session_start();
+  // Session started in front controller (public/index.php)
 }
 ?>
 <!DOCTYPE html>
@@ -59,140 +59,160 @@ if (session_status() === PHP_SESSION_NONE) {
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h4>Écritures détaillées (filtrées)</h4>
-          <div>
-            <button class="btn btn-danger me-2" onclick="exportPDF()">Exporter PDF</button>
-            <a class="btn btn-outline-secondary"
-              href="?page=dashboard&action=export&format=pdf&compte=<?= htmlspecialchars($_GET['compte'] ?? '') ?>&date_debut=<?= htmlspecialchars($_GET['date_debut'] ?? '') ?>&date_fin=<?= htmlspecialchars($_GET['date_fin'] ?? '') ?>">Exporter
-              PDF (serveur)</a>
-          </div>
         </div>
         <div class="table-responsive">
-          <table class="table table-bordered" id="detailTable">
+          <table class="table table-bordered table-success table-striped table-hover" id="detailTable">
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Lieu</th>
                 <th>Compte</th>
                 <th>Libellé</th>
                 <th>Débit</th>
                 <th>Crédit</th>
               </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+              <?php if (!empty($journal_paged) && is_array($journal_paged)):
+                foreach ($journal_paged as $e): ?>
+              <tr>
+                <td><?= htmlspecialchars($e['date'] ?? '') ?></td>
+                <td><?= htmlspecialchars($e['lieu'] ?? '') ?></td>
+                <td><?= htmlspecialchars($e['compte'] ?? '') ?></td>
+                <td><?= htmlspecialchars($e['libelle'] ?? '') ?></td>
+                <td class="text-end"><?= ($e['debit'] !== '' ? '$ ' . htmlspecialchars($e['debit']) : '') ?></td>
+                <td class="text-end"><?= ($e['credit'] !== '' ? '$ ' . htmlspecialchars($e['credit']) : '') ?></td>
+              </tr>
+              <?php endforeach; else: ?>
+              <tr>
+                <td colspan="6" class="text-center">Aucune donnée</td>
+              </tr>
+              <?php endif; ?>
+            </tbody>
           </table>
         </div>
+        <!-- Pagination -->
+        <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+        <nav aria-label="Pagination" class="mt-3 mb-3">
+          <ul class="pagination justify-content-center">
+            <li class="page-item disabled"><span
+                class="page-link"><?= htmlspecialchars($pagination->getDisplayMessage()) ?></span></li>
+            <?php $fcomp = urlencode($filters['compte'] ?? ($_GET['compte'] ?? ''));
+              $fd1 = urlencode($filters['date_debut'] ?? ($_GET['date_debut'] ?? ''));
+              $fd2 = urlencode($filters['date_fin'] ?? ($_GET['date_fin'] ?? '')); ?>
+            <?php if ($pagination->hasPreviousPage()): ?>
+            <li class="page-item"><a class="page-link"
+                href="?page=dashboard&page_num=1&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Première"><span aria-hidden="true">&laquo;&laquo;</span></a></li>
+            <li class="page-item"><a class="page-link"
+                href="?page=dashboard&page_num=<?= $pagination->getPreviousPage() ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Précédent"><span aria-hidden="true">&laquo;</span></a></li>
+            <?php else: ?>
+            <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+            <?php endif; ?>
+            <?php foreach ($pagination->getPageNumbers(2) as $pageNum): ?>
+            <?php if ($pageNum === '...'): ?>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            <?php elseif ($pageNum == $pagination->getCurrentPage()): ?>
+            <li class="page-item active"><span class="page-link"><?= $pageNum ?></span></li>
+            <?php else: ?>
+            <li class="page-item"><a class="page-link"
+                href="?page=dashboard&page_num=<?= $pageNum ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"><?= $pageNum ?></a>
+            </li>
+            <?php endif; ?>
+            <?php endforeach; ?>
+            <?php if ($pagination->hasNextPage()): ?>
+            <li class="page-item"><a class="page-link"
+                href="?page=dashboard&page_num=<?= $pagination->getNextPage() ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Suivant"><span aria-hidden="true">&raquo;</span></a></li>
+            <li class="page-item"><a class="page-link"
+                href="?page=dashboard&page_num=<?= $pagination->getTotalPages() ?>&compte=<?= $fcomp ?>&date_debut=<?= $fd1 ?>&date_fin=<?= $fd2 ?>"
+                aria-label="Dernière"><span aria-hidden="true">&raquo;&raquo;</span></a></li>
+            <?php else: ?>
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
+            <?php endif; ?>
+          </ul>
+        </nav>
+        <?php endif; ?>
       </div>
     </div>
   </div>
   <script>
-    console.log('🔍 Dashboard init...');
-    const balances = <?= json_encode($balances ?? [], JSON_HEX_TAG) ?>;
-    const journal = <?= json_encode($journal ?? [], JSON_HEX_TAG) ?>;
-    console.log('✅ Balances loaded:', balances.length, 'items');
-    console.log('✅ Journal loaded:', journal.length, 'items');
-    let balanceChart, journalChart, filteredJournalGlobal = [];
+  console.log('🔍 Dashboard init...');
+  const balances = <?= json_encode($balances ?? [], JSON_HEX_TAG) ?>;
+  const journal = <?= json_encode($journal ?? [], JSON_HEX_TAG) ?>;
+  console.log('✅ Balances loaded:', balances.length, 'items');
+  console.log('✅ Journal loaded:', journal.length, 'items');
+  let balanceChart, journalChart, filteredJournalGlobal = [];
 
-    window.addEventListener('error', function (e) {
-      console.error('❌ JS Error:', e.message, 'at', e.filename + ':' + e.lineno);
+  window.addEventListener('error', function(e) {
+    console.error('❌ JS Error:', e.message, 'at', e.filename + ':' + e.lineno);
+  });
+
+  window.addEventListener('unhandledrejection', function(e) {
+    console.error('❌ Promise Rejection:', e.reason);
+  });
+
+  function updateDashboard() {
+    const codeEl = document.getElementById('filterCompte_code');
+    const compte = codeEl ? codeEl.value : document.getElementById('filterCompte').value;
+    const start = document.getElementById('filterStart').value;
+    const end = document.getElementById('filterEnd').value;
+    
+    // Filtre journal - avec comparaison de dates correctes
+    let filteredJournal = journal.filter(e => {
+      if (compte && e.compte !== compte) return false;
+      if (start && (!e.date || e.date < start)) return false;
+      if (end && (!e.date || e.date > end)) return false;
+      return true;
     });
-
-    window.addEventListener('unhandledrejection', function (e) {
-      console.error('❌ Promise Rejection:', e.reason);
+    filteredJournalGlobal = filteredJournal.filter(e => (e.debit || 0) > 0);
+    
+    // Filtre balances - seulement si il y a un compte spécifique sinon afficher tous
+    let filteredBalances = balances.filter(b => {
+      if (!compte) return true;
+      return b._id === compte;
     });
+    
+    // Balance chart
+    const balanceLabels = filteredBalances.map(b => b._id);
+    const balanceDebits = filteredBalances.map(b => b.debit);
+    const balanceCredits = filteredBalances.map(b => b.credit);
+    balanceChart.data.labels = balanceLabels;
+    balanceChart.data.datasets[0].data = balanceDebits;
+    balanceChart.data.datasets[1].data = balanceCredits;
+    balanceChart.update();
+    
+    // Journal chart - groupé par mois
+    const months = {};
+    filteredJournal.forEach(e => {
+      if (!e.date) return;
+      const m = e.date.substring(0, 7);
+      if (!months[m]) months[m] = {
+        debit: 0,
+        credit: 0
+      };
+      months[m].debit += e.debit || 0;
+      months[m].credit += e.credit || 0;
+    });
+    const monthLabels = Object.keys(months).sort();
+    const monthDebits = monthLabels.map(m => months[m].debit);
+    const monthCredits = monthLabels.map(m => months[m].credit);
+    journalChart.data.labels = monthLabels;
+    journalChart.data.datasets[0].data = monthDebits;
+    journalChart.data.datasets[1].data = monthCredits;
+    journalChart.update();
+  }
 
-    function updateDashboard() {
-      const codeEl = document.getElementById('filterCompte_code');
-      const compte = codeEl ? codeEl.value : document.getElementById('filterCompte').value;
-      const start = document.getElementById('filterStart').value;
-      const end = document.getElementById('filterEnd').value;
-      // Filtre journal
-      let filteredJournal = journal.filter(e => {
-        if (compte && e.compte !== compte) return false;
-        if (start && (!e.date || e.date.substring(0, 7) < start)) return false;
-        if (end && (!e.date || e.date.substring(0, 7) > end)) return false;
-        return true;
-      });
-      filteredJournalGlobal = filteredJournal;
-      // Filtre balances
-      let filteredBalances = balances.filter(b => !compte || b._id === compte);
-      // Balance chart
-      const balanceLabels = filteredBalances.map(b => b._id);
-      const balanceDebits = filteredBalances.map(b => b.debit);
-      const balanceCredits = filteredBalances.map(b => b.credit);
-      balanceChart.data.labels = balanceLabels;
-      balanceChart.data.datasets[0].data = balanceDebits;
-      balanceChart.data.datasets[1].data = balanceCredits;
-      balanceChart.update();
-      // Journal chart
-      const months = {};
-      filteredJournal.forEach(e => {
-        if (!e.date) return;
-        const m = e.date.substring(0, 7);
-        if (!months[m]) months[m] = {
-          debit: 0,
-          credit: 0
-        };
-        months[m].debit += e.debit || 0;
-        months[m].credit += e.credit || 0;
-      });
-      const monthLabels = Object.keys(months);
-      const monthDebits = monthLabels.map(m => months[m].debit);
-      const monthCredits = monthLabels.map(m => months[m].credit);
-      journalChart.data.labels = monthLabels;
-      journalChart.data.datasets[0].data = monthDebits;
-      journalChart.data.datasets[1].data = monthCredits;
-      journalChart.update();
-      // Affichage détaillé
-      const tbody = document.querySelector('#detailTable tbody');
-      tbody.innerHTML = '';
-      filteredJournal.forEach(e => {
-        const tr = document.createElement('tr');
-        tr.innerHTML =
-          `<td>${e.date || ''}</td><td>${e.compte || ''}</td><td>${e.libelle || ''}</td><td>${e.debit || ''}</td><td>${e.credit || ''}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function buildReportHeaderHTML(titleText) {
-      const logoUrl = window.location.origin + '/asset.php?f=images/logo.png';
-      const now = new Date();
-      const dateStr = now.toLocaleString();
-      return `
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;">
-        <div style="flex:0 0 auto;text-align:left;">
-          <img src="${logoUrl}" style="height:70px;" alt="Logo">
-          <div style="font-size:12px;margin-top:6px;line-height:1.2;">N° RCCM : CD/KNG/RCCM/24-B-D4138<br>ID-NAT : 01-F4200-N 37015G<br>N° IMPOT : A2504347D<br>N° d’affiliation INSS : 1022461300<br>N° d’immatriculation A L’INPP : A2504347D</div>
-        </div>
-        <div style="flex:1 1 auto;text-align:right;font-size:12px;color:#333;">${dateStr}</div>
-      </div>
-      <div style="height:4px;background:#0d6efd;margin:8px 0 12px 0"></div>
-      <h2 style="text-align:center;font-weight:700;margin:6px 0 12px 0">${titleText}</h2>
-    `;
-    }
-
-    function exportPDF() {
-      const title = 'Export Journal Comptable';
-      let html = '<html><head><meta charset="utf-8"><style>table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:6px;text-align:center} td{text-align:left} </style></head><body>';
-      html += buildReportHeaderHTML(title);
-      html += '<table><thead><tr><th>Date</th><th>Compte</th><th>Libellé</th><th>Débit</th><th>Crédit</th></tr></thead><tbody>';
-      filteredJournalGlobal.forEach(e => {
-        html += `<tr><td>${e.date || ''}</td><td>${e.compte || ''}</td><td>${e.libelle || ''}</td><td style="text-align:right">${e.debit || ''}</td><td style="text-align:right">${e.credit || ''}</td></tr>`;
-      });
-      html += '</tbody></table></body></html>';
-
-      const w = window.open('', '', 'width=900,height=800');
-      w.document.write(html);
-      w.document.close();
-      setTimeout(() => { w.print(); }, 500);
-    }
-
-
-    window.addEventListener('DOMContentLoaded', () => {
-      // Init charts with current (possibly filtered) data
-      balanceChart = new Chart(document.getElementById('balanceChart'), {
-        type: 'bar',
-        data: {
-          labels: balances.map(b => b._id),
-          datasets: [{
+  window.addEventListener('DOMContentLoaded', () => {
+    // Init charts with current (possibly filtered) data
+    balanceChart = new Chart(document.getElementById('balanceChart'), {
+      type: 'bar',
+      data: {
+        labels: balances.map(b => b._id),
+        datasets: [{
             label: 'Débit',
             data: balances.map(b => b.debit),
             backgroundColor: 'rgba(54, 162, 235, 0.7)'
@@ -202,36 +222,36 @@ if (session_status() === PHP_SESSION_NONE) {
             data: balances.map(b => b.credit),
             backgroundColor: 'rgba(255, 99, 132, 0.7)'
           }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: 'top'
-            }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top'
           }
         }
-      });
-      const months = {};
-      journal.forEach(e => {
-        if (!e.date) return;
-        const m = e.date.substring(0, 7);
-        if (!months[m]) months[m] = {
-          debit: 0,
-          credit: 0
-        };
-        months[m].debit += e.debit || 0;
-        months[m].credit += e.credit || 0;
-      });
-      const monthLabels = Object.keys(months);
-      const monthDebits = monthLabels.map(m => months[m].debit);
-      const monthCredits = monthLabels.map(m => months[m].credit);
-      journalChart = new Chart(document.getElementById('journalChart'), {
-        type: 'line',
-        data: {
-          labels: monthLabels,
-          datasets: [{
+      }
+    });
+    const months = {};
+    journal.forEach(e => {
+      if (!e.date) return;
+      const m = e.date.substring(0, 7);
+      if (!months[m]) months[m] = {
+        debit: 0,
+        credit: 0
+      };
+      months[m].debit += e.debit || 0;
+      months[m].credit += e.credit || 0;
+    });
+    const monthLabels = Object.keys(months);
+    const monthDebits = monthLabels.map(m => months[m].debit);
+    const monthCredits = monthLabels.map(m => months[m].credit);
+    journalChart = new Chart(document.getElementById('journalChart'), {
+      type: 'line',
+      data: {
+        labels: monthLabels,
+        datasets: [{
             label: 'Débit',
             data: monthDebits,
             borderColor: 'rgba(54, 162, 235, 1)',
@@ -245,80 +265,60 @@ if (session_status() === PHP_SESSION_NONE) {
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
             fill: true
           }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: 'top'
-            }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top'
           }
         }
-      });
-
-      // --- Logo preview handling -------------------------------------------------
-      (function () {
-        const previewImg = document.getElementById('logoPreviewImg');
-        if (!previewImg) {
-          console.log('ℹ️ Logo preview image not found in DOM (was commented out)');
-          return;
-        }
-
-        function markLoaded() {
-          console.log('✅ Logo loaded:', previewImg.naturalWidth + 'x' + previewImg.naturalHeight);
-          try {
-            showTempAlert('Logo local accessible — prêt pour export PDF', 'success', 3000);
-          } catch (e) {
-            console.warn('Alert fn not ready:', e);
-          }
-        }
-
-        function markError() {
-          console.warn('⚠️ Logo failed to load');
-          try {
-            showTempAlert("Logo local inaccessible. L'export utilisera une image de secours.", 'warning', 5000);
-          } catch (e) {
-            console.warn('Alert fn not ready:', e);
-          }
-        }
-
-        previewImg.addEventListener('load', markLoaded);
-        previewImg.addEventListener('error', markError);
-
-        // Forcer la vérification si l'image est déjà en cache
-        if (previewImg.complete) {
-          if (previewImg.naturalWidth) markLoaded();
-          else markError();
-        }
-      })();
-      // ---------------------------------------------------------------------------
-      // Populate details table and refresh charts to reflect current filter inputs
-      updateDashboard();
-
-      // Attach AccountSearch to filterCompte input (search suggestions)
-      (function () {
-        var hidden = document.getElementById('filterCompte_code');
-        AccountSearch.fetchComptes().then(function () {
-          // prefill display if code exists
-          var initial = hidden ? hidden.value : '';
-          if (initial) {
-            var found = (window.comptesList || []).find(c => c.code === initial);
-            if (found) document.getElementById('filterCompte').value = found.code + ' — ' + (found.label || '');
-          }
-
-          AccountSearch.createSuggestionBox({
-            inputId: 'filterCompte',
-            suggestionsId: 'filter_compte_suggestions',
-            renderItemHtml: function (c) { return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`; },
-            onChoose: function (item) { if (!item) return; document.getElementById('filterCompte').value = item.code + ' — ' + (item.label || ''); if (hidden) hidden.value = item.code; updateDashboard(); }
-          });
-
-          // if user clears the display, clear the code
-          document.getElementById('filterCompte').addEventListener('input', function () { if (!this.value && hidden) hidden.value = ''; });
-        }).catch(console.error);
-      })();
+      }
     });
+
+    // --- Attach event listeners for real-time filter updates ---
+    document.getElementById('filterStart').addEventListener('change', updateDashboard);
+    document.getElementById('filterEnd').addEventListener('change', updateDashboard);
+    
+    // Populate details table and refresh charts to reflect current filter inputs
+    updateDashboard();
+
+    // Attach AccountSearch to filterCompte input (search suggestions)
+    (function() {
+      var hidden = document.getElementById('filterCompte_code');
+      AccountSearch.fetchComptes().then(function() {
+        // prefill display if code exists
+        var initial = hidden ? hidden.value : '';
+        if (initial) {
+          var found = (window.comptesList || []).find(c => c.code === initial);
+          if (found) document.getElementById('filterCompte').value = found.code + ' — ' + (found.label || '');
+        }
+
+        AccountSearch.createSuggestionBox({
+          inputId: 'filterCompte',
+          suggestionsId: 'filter_compte_suggestions',
+          renderItemHtml: function(c) {
+            return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>`;
+          },
+          onChoose: function(item) {
+            if (!item) return;
+            document.getElementById('filterCompte').value = item.code + ' — ' + (item.label || '');
+            if (hidden) hidden.value = item.code;
+            updateDashboard();
+          }
+        });
+
+        // if user clears the display, clear the code and trigger update
+        document.getElementById('filterCompte').addEventListener('input', function() {
+          if (!this.value && hidden) {
+            hidden.value = '';
+            updateDashboard();
+          }
+        });
+      }).catch(console.error);
+    })();
+  });
   </script>
   <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>

@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue | J.F Business - Comptabilité et Services</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.theme.default.min.css">
+  <link rel="stylesheet" href="/asset.php?f=css/custom.css">
+  <style>
+    :root {
+      --primary-color: #1a5490;
+      --secondary-color: #f39c12;
+      --text-color: #333;
+      --light-bg: #f8f9fa;
+    }
+
+    /* NAVBAR PUBLIC */
+    body {
+      padding-top: 70px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .navbar-public {
+      background: linear-gradient(135deg, var(--primary-color) 0%, #0d3b7a 100%);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+    }
+
+    .navbar-public .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .navbar-public .navbar-brand img {
+      height: 40px;
+      width: auto;
+    }
+
+    .navbar-public .nav-link {
+      color: rgba(255, 255, 255, 0.85) !important;
+      transition: all 0.3s ease;
+      margin: 0 10px;
+    }
+
+    .navbar-public .nav-link:hover,
+    .navbar-public .nav-link.active {
+      color: var(--secondary-color) !important;
+      font-weight: 600;
+    }
+
+    .btn-login {
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    .btn-login:hover {
+      background-color: #e67e22;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* HERO SECTION - Carrousel */
+    .hero-carousel {
+      position: relative;
+      min-height: 500px;
+      overflow: hidden;
+    }
+
+    .carousel-slide {
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      min-height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .carousel-slide::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(26, 84, 144, 0.5);
+    }
+
+    .carousel-content {
+      position: relative;
+      z-index: 2;
+      color: white;
+      text-align: center;
+      max-width: 700px;
+    }
+
+    .carousel-content h2 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .carousel-content p {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .carousel-btn {
+      background-color: var(--secondary-color);
+      color: white;
+      padding: 12px 30px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 50px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .carousel-btn:hover {
+      background-color: #e67e22;
+      transform: scale(1.05);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    /* SECTION GÉNÉRALE */
+    .section {
+      padding: 60px 0;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 50px;
+      position: relative;
+      padding-bottom: 20px;
+    }
+
+    .section-title h2 {
+      color: var(--primary-color);
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 4px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border-radius: 2px;
+    }
+
+    .section-title p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+
+    /* SECTION À PROPOS */
+    #about {
+      background-color: var(--light-bg);
+    }
+
+    .about-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 50px;
+      align-items: center;
+    }
+
+    .about-text h3 {
+      color: var(--primary-color);
+      font-weight: 700;
+      margin-bottom: 15px;
+      font-size: 1.8rem;
+    }
+
+    .about-text p {
+      color: #666;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+
+    .btn-see-more {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 10px 25px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-see-more:hover {
+      background-color: #0d3b7a;
+      transform: translateX(5px);
+    }
+
+    .about-carousel {
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .about-carousel img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* SECTION SERVICES */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+
+    .service-card {
+      background: white;
+      border: none;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    .service-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .service-icon {
+      font-size: 3rem;
+      color: var(--primary-color);
+      margin-bottom: 15px;
+    }
+
+    .service-card h4 {
+      color: var(--primary-color);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .service-card p {
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    /* SECTION ACTIVITÉS */
+    .activities-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    .activity-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    .activity-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .activity-image {
+      width: 100%;
+      height: 250px;
+      background-color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .activity-content {
+      padding: 20px;
+    }
+
+    .activity-content h5 {
+      color: var(--primary-color);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .activity-content p {
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+    }
+
+    .btn-activity {
+      background-color: var(--secondary-color);
+      color: white;
+      padding: 8px 20px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .btn-activity:hover {
+      background-color: #e67e22;
+    }
+
+    /* SECTION PARTENAIRES */
+    #partners {
+      background-color: var(--light-bg);
+    }
+
+    .partners-carousel {
+      padding: 40px 0;
+    }
+
+    .partner-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 120px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .partner-logo:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .partner-logo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* SECTION CONTACT */
+    .contact-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+
+    .contact-left {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .contact-info {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+    }
+
+    .contact-info-icon {
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      min-width: 30px;
+    }
+
+    .contact-info-text h4 {
+      color: var(--primary-color);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .contact-info-text p {
+      color: #666;
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .contact-map {
+      width: 100%;
+      height: 300px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .contact-map iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .contact-right {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .contact-right h4 {
+      color: var(--primary-color);
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      color: var(--text-color);
+      font-weight: 500;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 5px rgba(26, 84, 144, 0.2);
+    }
+
+    .btn-send {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      width: 100%;
+    }
+
+    .btn-send:hover {
+      background-color: #0d3b7a;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* FOOTER */
+    footer {
+      background: linear-gradient(135deg, var(--primary-color) 0%, #0d3b7a 100%);
+      color: white;
+      padding: 40px 0 20px;
+      margin-top: 60px;
+    }
+
+    .footer-content {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .footer-section h5 {
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: var(--secondary-color);
+    }
+
+    .footer-section p,
+    .footer-section a {
+      color: rgba(255, 255, 255, 0.8);
+      transition: color 0.3s ease;
+      text-decoration: none;
+    }
+
+    .footer-section a:hover {
+      color: var(--secondary-color);
+    }
+
+    .footer-divider {
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 20px;
+      text-align: center;
+    }
+
+    .footer-divider p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.9rem;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      body {
+        padding-top: 60px;
+      }
+
+      .carousel-content h2 {
+        font-size: 2rem;
+      }
+
+      .carousel-content p {
+        font-size: 1rem;
+      }
+
+      .about-container {
+        grid-template-columns: 1fr;
+      }
+
+      .section-title h2 {
+        font-size: 2rem;
+      }
+
+      .contact-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- NAVBAR PUBLIC -->
+  <nav class="navbar navbar-expand-lg navbar-public">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#home">
+        <i class="bi bi-briefcase"></i>
+        <span>J.F Business</span>
+      </a>
+
+      <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#home">Accueil</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#about">À propos</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#services">Services</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#activities">Activités</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#contact">Contact</a>
+          </li>
+          <li class="nav-item ms-2">
+            <a href="?page=login" class="btn btn-login btn-sm">
+              <i class="bi bi-box-arrow-in-right"></i> Connexion
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  
+  <!-- HERO SECTION - CARROUSEL -->
+  <section id="home" class="hero-carousel owl-carousel owl-theme">
+                                          <div class="item carousel-slide" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/uploads/admin/home/1770564009_CB%20LOGO.png')">
+          <div class="carousel-content">
+            <h2>Congo Build Logo</h2>
+            <p>Tous pour l&#039;innovation de notre pays, Congo Build pour vous guider</p>
+                          <button class="carousel-btn">Découvrir plus</button>
+                      </div>
+        </div>
+                                      <div class="item carousel-slide" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/uploads/admin/home/1770563702_J.F.%20LOGO.png')">
+          <div class="carousel-content">
+            <h2>logo</h2>
+            <p>l&#039;image de l‘entreprise pour le soulevement des evenement</p>
+                          <button class="carousel-btn">Découvrir plus</button>
+                      </div>
+        </div>
+            </section>
+
+  <!-- SECTION À PROPOS -->
+  <section id="about" class="section">
+    <div class="container">
+      <div class="section-title">
+        <h2>À propos de nous</h2>
+        <p>Découvrez J.F Business</p>
+      </div>
+
+      <div class="about-container">
+                <div class="about-text">
+          <h3>J.F Business</h3>
+          <p>
+            Depuis sa création, J.F Business s&#039;est établie comme un partenaire de confiance pour les entreprises cherchant des solutions comptables innovantes et des services professionnels de qualité.          </p>
+                    <button class="btn-see-more">Voir plus</button>
+        </div>
+        <div class="about-carousel">
+                      <img
+              src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 500 400%22%3E%3Crect fill=%23e0e0e0%22 width=%22500%22 height=%22400%22/%3E%3Ctext x=%22250%22 y=%22200%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2224%22 fill=%22%23999%22%3EImage À propos%3C/text%3E%3C/svg%3E"
+              alt="À propos">
+                  </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION SERVICES -->
+  <section id="services" class="section">
+    <div class="container">
+      <div class="section-title">
+        <h2>Nos Services</h2>
+        <p>Les solutions que nous proposons</p>
+      </div>
+
+      <div class="services-grid">
+                  <div class="service-card">
+            <div class="service-icon"><i class="bi bi-calculator-fill"></i></div>
+            <h4>Comptabilité</h4>
+            <p>Gestion complète de votre comptabilité avec les meilleures pratiques.</p>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><i class="bi bi-bar-chart-fill"></i></div>
+            <h4>Audit Financier</h4>
+            <p>Audit complet de vos données financières pour assurer la conformité.</p>
+          </div>
+              </div>
+    </div>
+  </section>
+
+  <!-- SECTION ACTIVITÉS EN COURS -->
+  <section id="activities" class="section" style="background-color: var(--light-bg);">
+    <div class="container">
+      <div class="section-title">
+        <h2>Activités en cours</h2>
+        <p>Les projets actuellement en exécution</p>
+      </div>
+
+      <div class="activities-grid">
+                  <div class="activity-card">
+            <div class="activity-image"><img
+                src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 250%22%3E%3Crect fill=%23e0e0e0%22 width=%22300%22 height=%22250%22/%3E%3C/svg%3E"
+                alt=""></div>
+            <div class="activity-content">
+              <h5>Projet 1</h5>
+              <p>Description du projet en cours d'exécution.</p><button class="btn-activity">Voir plus</button>
+            </div>
+          </div>
+              </div>
+    </div>
+  </section>
+
+  <!-- SECTION PARTENAIRES -->
+  <section id="partners" class="section">
+    <div class="container">
+      <div class="section-title">
+        <h2>Nos Partenaires</h2>
+        <p>Ils nous font confiance</p>
+      </div>
+
+      <div class="partners-carousel">
+        <div class="row">
+                      <div class="col-md-6 col-lg-3 mb-4">
+              <div class="partner-logo"><img
+                  src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 100%22%3E%3Crect fill=%23f0f0f0%22 width=%22200%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2216%22 fill=%22%23999%22%3EPartenaire%201%3C/text%3E%3C/svg%3E"
+                  alt="Partenaire 1"></div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+              <div class="partner-logo"><img
+                  src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 100%22%3E%3Crect fill=%23f0f0f0%22 width=%22200%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2216%22 fill=%22%23999%22%3EPartenaire%202%3C/text%3E%3C/svg%3E"
+                  alt="Partenaire 2"></div>
+            </div>
+                  </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION CONTACT -->
+  <section id="contact" class="section">
+    <div class="container">
+      <div class="section-title">
+        <h2>Nous Contacter</h2>
+        <p>Envoyez-nous votre message</p>
+      </div>
+
+      <div class="contact-container">
+        <div class="contact-left">
+          <div class="contact-info">
+            <div class="contact-info-icon">
+              <i class="bi bi-geo-alt-fill"></i>
+            </div>
+            <div class="contact-info-text">
+              <h4>Adresse</h4>
+              <p>123 Rue de l'Affaire<br>75000 Paris, France</p>
+            </div>
+          </div>
+
+          <div class="contact-info">
+            <div class="contact-info-icon">
+              <i class="bi bi-envelope-fill"></i>
+            </div>
+            <div class="contact-info-text">
+              <h4>Email</h4>
+              <p><a href="mailto:info@jfbusiness.com" style="color: inherit;">info@jfbusiness.com</a></p>
+            </div>
+          </div>
+
+          <div class="contact-info">
+            <div class="contact-info-icon">
+              <i class="bi bi-whatsapp"></i>
+            </div>
+            <div class="contact-info-text">
+              <h4>WhatsApp</h4>
+              <p><a href="https://wa.me/33612345678" style="color: inherit;">+33 6 12 34 56 78</a></p>
+            </div>
+          </div>
+
+          <div class="contact-map">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2624.9955896450473!2d2.2922926!3d48.8588897!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e66fb6b6f3f0f7%3A0x2f2f2f2f2f2f2f2f!2sParis%2C%20France!5e0!3m2!1sfr!2sfr!4v1234567890"
+              allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+        </div>
+
+        <div class="contact-right">
+          <h4>Envoyez-nous un message</h4>
+                              <form id="contactForm" method="post" action="?page=home&action=contact">
+            <div class="form-group">
+              <label for="contactName">Nom *</label>
+              <input type="text" id="contactName" name="name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="contactEmail">Email *</label>
+              <input type="email" id="contactEmail" name="email" required>
+            </div>
+
+            <div class="form-group">
+              <label for="contactSubject">Sujet *</label>
+              <input type="text" id="contactSubject" name="subject" required>
+            </div>
+
+            <div class="form-group">
+              <label for="contactMessage">Message *</label>
+              <textarea id="contactMessage" name="message" rows="5" required></textarea>
+            </div>
+
+            <button type="submit" class="btn-send">
+              <i class="bi bi-send"></i> Envoyer
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h5>À propos</h5>
+          <p>J.F Business est votre partenaire de confiance pour tous vos besoins en comptabilité et services
+            professionnels.</p>
+        </div>
+
+        <div class="footer-section">
+          <h5>Services</h5>
+          <a href="#services">Comptabilité</a><br>
+          <a href="#services">Audit Financier</a><br>
+          <a href="#services">Conseil Fiscal</a><br>
+          <a href="#services">Paie et RH</a>
+        </div>
+
+        <div class="footer-section">
+          <h5>Contact</h5>
+          <p>Email: info@jfbusiness.com<br>
+            Tél: +33 6 12 34 56 78<br>
+            Adresse: 123 Rue de l'Affaire<br>75000 Paris, France</p>
+        </div>
+
+        <div class="footer-section">
+          <h5>Suivez-nous</h5>
+          <a href="#" class="footer-link"><i class="bi bi-facebook"></i> Facebook</a><br>
+          <a href="#" class="footer-link"><i class="bi bi-twitter"></i> Twitter</a><br>
+          <a href="#" class="footer-link"><i class="bi bi-linkedin"></i> LinkedIn</a>
+        </div>
+      </div>
+
+      <div class="footer-divider">
+        <p>&copy; 2024 J.F Business. Tous droits réservés. | <a href="#">Politique de confidentialité</a> | <a
+            href="#">Conditions d'utilisation</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+  <script>
+    // Smooth scrolling for navbar links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#' && document.querySelector(href)) {
+          e.preventDefault();
+          document.querySelector(href).scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Update active navbar link on scroll
+    window.addEventListener('scroll', function () {
+      let current = '';
+      const sections = document.querySelectorAll('section');
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (scrollY >= (sectionTop - 200)) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.navbar-nav a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href').slice(1) === current) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Contact form is submitted to server-side handler
+
+    // Carousel auto-play
+    $(document).ready(function () {
+      if ($('.owl-carousel').length) {
+        // initialize non-hero carousels (partners, about, etc.)
+        $(".owl-carousel").not('.hero-carousel').owlCarousel({
+          loop: true,
+          margin: 10,
+          responsive: {
+            0: { items: 1 },
+            600: { items: 2 },
+            1000: { items: 4 }
+          }
+        });
+
+        // initialize hero carousel with right-to-left autoplay
+        if ($('.hero-carousel.owl-carousel').length) {
+          $(".hero-carousel.owl-carousel").owlCarousel({
+            items: 1,
+            loop: true,
+            autoplay: true,
+            autoplayTimeout: 5000,
+            autoplayHoverPause: true,
+            rtl: true,
+            animateOut: 'fadeOut'
+          });
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

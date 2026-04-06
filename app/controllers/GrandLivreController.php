@@ -103,6 +103,22 @@ class GrandLivreController extends Controller
         $header = \App\Helpers\PdfHelper::renderHeader('Grand Livre');
 
         $html = $header;
+
+        // Afficher les filtres actifs si présents
+        $activeFilters = [];
+        if (!empty($selected))
+            $activeFilters[] = 'Compte: ' . htmlspecialchars($selected);
+        if (!empty($filters['date_debut']))
+            $activeFilters[] = 'Depuis: ' . htmlspecialchars($filters['date_debut']);
+        if (!empty($filters['date_fin']))
+            $activeFilters[] = 'Jusqu\'au: ' . htmlspecialchars($filters['date_fin']);
+
+        if (!empty($activeFilters)) {
+            $html .= '<div style="background:#f8f9fa;padding:8px;margin-bottom:12px;border:1px solid #dee2e6;border-radius:4px;">';
+            $html .= '<strong>Filtres appliqués:</strong> ' . implode(' | ', $activeFilters);
+            $html .= '</div>';
+        }
+
         $html .= '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Date</th><th>Libellé</th><th>Débit</th><th>Crédit</th></tr></thead><tbody>';
         foreach ($entries as $e) {
             $html .= '<tr>';

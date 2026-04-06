@@ -21,10 +21,14 @@
           </div>
           <div class="card-body">
             <?php if (!empty($error)): ?>
-            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+            <div class="alert alert-danger">
+              <?= htmlspecialchars($error) ?>
+            </div>
             <?php endif; ?>
             <?php if (!empty($success)): ?>
-            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <div class="alert alert-success">
+              <?= htmlspecialchars($success) ?>
+            </div>
             <?php endif; ?>
             <form method="post" onsubmit="return validateRegisterForm();" novalidate>
               <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
@@ -43,7 +47,9 @@
               <?php endif; ?>
               <div class="mb-3">
                 <label for="password" class="form-label">Mot de
-                  passe<?= !empty($editUser) ? ' (laisser vide pour ne pas changer)' : '' ?></label>
+                  passe
+                  <?= !empty($editUser) ? ' (laisser vide pour ne pas changer)' : '' ?>
+                </label>
                 <input type="password" class="form-control" id="password" name="password"
                   <?= empty($editUser) ? 'required' : '' ?> minlength="6" placeholder="••••••••">
               </div>
@@ -63,8 +69,9 @@
                 </select>
               </div>
               <div class="d-flex gap-2">
-                <button type="submit"
-                  class="btn btn-success flex-grow-1"><?= !empty($editUser) ? 'Enregistrer les modifications' : 'Créer l\'utilisateur' ?></button>
+                <button type="submit" class="btn btn-success flex-grow-1">
+                  <?= !empty($editUser) ? 'Enregistrer les modifications' : 'Créer l\'utilisateur' ?>
+                </button>
                 <?php if (!empty($editUser)): ?>
                 <a href="?page=register" class="btn btn-secondary">Annuler</a>
                 <?php endif; ?>
@@ -95,11 +102,17 @@
                   <?php if (!empty($users)): ?>
                   <?php foreach ($users as $user): ?>
                   <tr>
-                    <td><?= htmlspecialchars($user['username']) ?></td>
                     <td>
-                      <span class="badge bg-info"><?= htmlspecialchars($user['role'] ?? 'user') ?></span>
+                      <?= htmlspecialchars($user['username']) ?>
                     </td>
-                    <td><?= htmlspecialchars($user['created_at'] ?? 'N/A') ?></td>
+                    <td>
+                      <span class="badge bg-info">
+                        <?= htmlspecialchars($user['role'] ?? 'user') ?>
+                      </span>
+                    </td>
+                    <td>
+                      <?= htmlspecialchars($user['created_at'] ?? 'N/A') ?>
+                    </td>
                     <td class="d-flex align-items-center gap-3">
                       <a href="?page=register&action=edit&user_id=<?= urlencode($user['_id']) ?>"
                         class="btn btn-sm btn-primary">✏️ </a>

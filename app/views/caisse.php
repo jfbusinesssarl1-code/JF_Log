@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE)
-  session_start();
+// Session started in front controller (public/index.php)
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -10,24 +10,30 @@ if (session_status() === PHP_SESSION_NONE)
   require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
-<body>
+<body class="position-relative">
   <?php include __DIR__ . '/navbar.php'; ?>
   <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div>
-        <a class="btn btn-outline-secondary me-2" href="?page=caisse&action=export&format=pdf">Exporter PDF</a>
-        <?php if (!class_exists('\\Mpdf\\Mpdf')): ?>
-        <button class="btn btn-outline-info" type="button" onclick="exportCaisseToPDFClient()">Exporter PDF
-          (imprimer)</button>
-        <?php endif; ?>
-      </div>
+    <h2 class="mb-0 fw-bold fs-2">Livre de caisse</h2>
+    
+    <!-- Export PDF Button - Desktop and Mobile -->
+    <div class="no-print">
+      <!-- Desktop version -->
+      <a class="btn btn-export-pdf d-none d-md-inline-flex" 
+        href="?page=caisse&action=export&format=pdf&<?= http_build_query($filters) ?>"
+        style="position: fixed; bottom: 80px; right: 2%; z-index: 1070;">
+        <i class="bi bi-file-earmark-pdf me-2"></i> Exporter PDF
+      </a>
+      <!-- Mobile version -->
+      <a class="btn btn-export-pdf-mobile d-md-none" 
+        href="?page=caisse&action=export&format=pdf&<?= http_build_query($filters) ?>"
+        style="position: fixed; bottom: 80px; right: 16px; z-index: 1070;"
+        title="Exporter PDF">
+        <i class="bi bi-file-earmark-pdf"></i>
+      </a>
     </div>
-
+    
     <!-- Filters Section -->
     <div class="card mb-4">
-      <div class="card-header bg-light">
-        <h5 class="mb-0">Filtres</h5>
-      </div>
       <div class="card-body">
         <form method="get" class="row g-2">
           <input type="hidden" name="page" value="caisse">
@@ -67,13 +73,11 @@ if (session_status() === PHP_SESSION_NONE)
     </div>
 
     <div class="table-responsive" style="padding-bottom:88px;" style="font-size: small;">
-
-      <h2 class="mb-0 fw-bold fs-2">Livre de caisse</h2>
       <table class="table table-bordered">
         <thead>
           <tr class="table-secondary table-gradient">
-            <th>Date</th>
-            <th>N° Bon Manuel</th>
+            <th style="width: 10%;">Date</th>
+            <th style="width: 10%;">N° Bon Manuel</th>
             <th>Opérateur</th>
             <th>Libellé</th>
             <th class="text-end">Recette</th>
@@ -85,67 +89,156 @@ if (session_status() === PHP_SESSION_NONE)
         <tbody>
           <?php if (!empty($items)):
             foreach ($items as $it): ?>
-          <tr>
-            <td><?= htmlspecialchars($it['date'] ?? '') ?></td>
-            <td><?= htmlspecialchars($it['numero_bon_manuscrit'] ?? '') ?></td>
-            <td><?= htmlspecialchars($it['operateur'] ?? '') ?></td>
-            <td><?= htmlspecialchars($it['libelle'] ?? '') ?></td>
-            <td class="text-end"><?= number_format($it['recette'] ?? 0, 2) ?></td>
-            <td class="text-end"><?= number_format($it['depense'] ?? 0, 2) ?></td>
-            <td class="text-end"><?= number_format($it['solde'] ?? 0, 2) ?></td>
-            <td class="d-flex justify-content-center gap-2">
-              <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])): ?>
-              <a class="btn btn-sm btn-primary" href="?page=caisse&action=edit&id=<?= $it['_id'] ?? '' ?>"
-                style="font-size: small;">Modifier</a>
-              <a class="btn btn-sm btn-danger" href="?page=caisse&action=delete&id=<?= $it['_id'] ?? '' ?>"
-                onclick="return confirm('Supprimer ?')" style="font-size: small;">Supprimer</a>
-              <?php else: ?>
-              —
-              <?php endif; ?>
-            </td>
-          </tr>
-          <?php endforeach; else: ?>
-          <tr>
-            <td colspan="9" class="text-center">Aucune opération</td>
-          </tr>
+              <tr>
+                <td><?= htmlspecialchars($it['date'] ?? '') ?></td>
+                <td><?= htmlspecialchars($it['numero_bon_manuscrit'] ?? '') ?></td>
+                <td><?= htmlspecialchars($it['operateur'] ?? '') ?></td>
+                <td><?= htmlspecialchars($it['libelle'] ?? '') ?></td>
+                <td class="text-end"><?= number_format($it['recette'] ?? 0, 2) ?></td>
+                <td class="text-end"><?= number_format($it['depense'] ?? 0, 2) ?></td>
+                <td class="text-end"><?= number_format($it['solde'] ?? 0, 2) ?></td>
+                <td class="d-flex justify-content-center gap-2">
+                  <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])): ?>
+                    <a class="btn btn-sm btn-primary" href="?page=caisse&action=edit&id=<?= $it['_id'] ?? '' ?>"
+                      style="font-size: small;">Modifier</a>
+                    <?php $csrfToken = \App\Core\Csrf::getToken(); ?>
+                    <a class="btn btn-sm btn-danger" href="?page=caisse&action=delete&id=<?= $it['_id'] ?? '' ?>&token=<?= urlencode($csrfToken) ?>"
+                      onclick="return confirm('Supprimer ?')" style="font-size: small;">Supprimer</a>
+                  <?php else: ?>
+                    —
+                  <?php endif; ?>
+                </td>
+              </tr>
+            <?php endforeach; else: ?>
+            <tr>
+              <td colspan="9" class="text-center">Aucune opération</td>
+            </tr>
           <?php endif; ?>
         </tbody>
       </table>
     </div>
 
-    <!-- Add Entry Section -->
+    <!-- Pagination Section -->
+    <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+      <nav aria-label="Pagination" class="mt-4 mb-4">
+        <ul class="pagination justify-content-center">
+          <!-- Texte informatif -->
+          <li class="page-item disabled">
+            <span class="page-link"><?= htmlspecialchars($pagination->getDisplayMessage()) ?></span>
+          </li>
+
+          <!-- Bouton Précédent -->
+          <?php if ($pagination->hasPreviousPage()): ?>
+            <li class="page-item">
+              <a class="page-link" href="?page=caisse&page_num=1&<?= http_build_query($filters) ?>" aria-label="Première">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=caisse&page_num=<?= $pagination->getPreviousPage() ?>&<?= http_build_query($filters) ?>"
+                aria-label="Précédent">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+          <?php else: ?>
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;&laquo;</span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;</span>
+            </li>
+          <?php endif; ?>
+
+          <!-- Numéros de pages -->
+          <?php foreach ($pagination->getPageNumbers(2) as $pageNum): ?>
+            <?php if ($pageNum === '...'): ?>
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            <?php elseif ($pageNum == $pagination->getCurrentPage()): ?>
+              <li class="page-item active">
+                <span class="page-link"><?= $pageNum ?></span>
+              </li>
+            <?php else: ?>
+              <li class="page-item">
+                <a class="page-link"
+                  href="?page=caisse&page_num=<?= $pageNum ?>&<?= http_build_query($filters) ?>"><?= $pageNum ?></a>
+              </li>
+            <?php endif; ?>
+          <?php endforeach; ?>
+
+          <!-- Bouton Suivant -->
+          <?php if ($pagination->hasNextPage()): ?>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=caisse&page_num=<?= $pagination->getNextPage() ?>&<?= http_build_query($filters) ?>"
+                aria-label="Suivant">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=caisse&page_num=<?= $pagination->getTotalPages() ?>&<?= http_build_query($filters) ?>"
+                aria-label="Dernière">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+              </a>
+            </li>
+          <?php else: ?>
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;&raquo;</span>
+            </li>
+          <?php endif; ?>
+        </ul>
+      </nav>
+    <?php endif; ?>
 
     <?php if (!class_exists('\\Mpdf\\Mpdf')): ?>
-    <div class="alert alert-warning">Le serveur ne dispose pas du générateur PDF (<code>mpdf/mpdf</code>). Cliquez sur
-      <strong>Exporter PDF (imprimer)</strong> pour ouvrir une version imprimable et enregistrer en PDF via votre
-      navigateur, ou installez <code>composer require mpdf/mpdf</code> pour des PDF côté serveur.
-    </div>
+      <div class="alert alert-warning">Le serveur ne dispose pas du générateur PDF (<code>mpdf/mpdf</code>). Cliquez sur
+        <strong>Exporter PDF (imprimer)</strong> pour ouvrir une version imprimable et enregistrer en PDF via votre
+        navigateur, ou installez <code>composer require mpdf/mpdf</code> pour des PDF côté serveur.
+      </div>
     <?php endif; ?>
 
     <script>
-    function exportCaisseToPDFClient() {
-      // Collect table HTML
-      const table = document.querySelector('.table-responsive .table');
-      if (!table) return alert('Tableau introuvable');
-      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Livre de caisse</title>` +
-        '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' +
-        '</head><body class="p-4">' +
-        '<h2>Livre de caisse</h2>' + table.outerHTML +
-        '<script>window.onload = function(){ window.print(); }</' + 'script>' +
-        '</body></html>';
-      const w = window.open('', '_blank');
-      w.document.write(html);
-      w.document.close();
-    }
+      function exportCaisseToPDFClient() {
+        // Collect table HTML
+        const table = document.querySelector('.table-responsive .table');
+        if (!table) return alert('Tableau introuvable');
+        const html = `<!doctype html><html><head><meta charset="utf-8"><title>Livre de caisse</title>` +
+          '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' +
+          '</head><body class="p-4">' +
+          '<h2>Livre de caisse</h2>' + table.outerHTML +
+          '<script>window.onload = function(){ window.print(); }</' + 'script>' +
+          '</body></html>';
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+      }
     </script>
 
     <!-- bouton pour ouvrir le modal (seulement caissier + admin) -->
-    <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])): ?>
-    <button type="button" class="btn btn-primary btn-fab-caisse position-fixed bottom-0 end-0 me-4 mb-4"
-      data-bs-toggle="modal" data-bs-target="#caisseModal" aria-label="Ajouter une opération">
-      nouvelle opération
-    </button>
-    <?php endif; ?>
+    <div class="no-print">
+      <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])): ?>
+        <!-- Version desktop -->
+        <button type="button" class="btn btn-primary d-none d-md-inline-flex"
+          data-bs-toggle="modal" data-bs-target="#caisseModal"
+          title="Ajouter une opération de caisse"
+          style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">
+          <i class="bi bi-plus-circle me-2"></i> Nouvelle opération
+        </button>
+        <!-- Version mobile FAB -->
+        <button type="button" class="btn btn-primary d-md-none fab"
+          data-bs-toggle="modal" data-bs-target="#caisseModal"
+          aria-label="Ajouter une opération"
+          style="position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          <i class="bi bi-plus-lg" style="font-size: 24px;"></i>
+        </button>
+      <?php endif; ?>
+    </div>
 
 
 
@@ -205,243 +298,243 @@ if (session_status() === PHP_SESSION_NONE)
     </div>
 
     <script>
-    (function() {
-      const modalEl = document.getElementById('caisseModal');
-      if (!modalEl) return;
-      const inlineForm = document.getElementById('caisse-inline-form');
-      const modalForm = document.getElementById('caisse-modal-form');
+      (function () {
+        const modalEl = document.getElementById('caisseModal');
+        if (!modalEl) return;
+        const inlineForm = document.getElementById('caisse-inline-form');
+        const modalForm = document.getElementById('caisse-modal-form');
 
-      // When modal opens: copy any values from inline form and focus date (or set today)
-      modalEl.addEventListener('shown.bs.modal', function() {
-        try {
-          const get = (name) => (inlineForm.querySelector('[name="' + name + '"]') || {}).value || '';
-          ['date', 'type', 'numero_bon_manuscrit', 'operateur', 'libelle', 'montant'].forEach((n) => {
-            const el = modalForm.querySelector('[name="' + n + '"]');
-            if (!el) return;
-            const v = get(n);
-            if (v) el.value = v;
-            else if (n === 'date' && !el.value) el.value = new Date().toISOString().slice(0, 10);
-          });
-          const first = modalForm.querySelector('input,select,textarea');
-          if (first) first.focus();
-        } catch (e) {
-          /* silent */
-        }
-      });
-
-      // Clear modal on hide to avoid stale values
-      modalEl.addEventListener('hidden.bs.modal', function() {
-        try {
-          modalForm.reset();
-        } catch (e) {
-          /* silent */
-        }
-
-    // If the user added one or more entries while the modal was open,
-    // refresh the page when they explicitly close the modal so the
-    // whole UI (filters, totals, sidebars) is consistent.
-    try {
-      if (window.__caisseDirty) {
-        // small delay to let the hide animation finish
-        setTimeout(() => {
-          window.__caisseDirty = false;
-          window.location.reload();
-        }, 150);
-      }
-    } catch (e) {
-      /* silent */
-    }
-        submitBtn.disabled = on;
-        submitBtn.innerHTML = on ? (text || 'En cours...') : 'Ajouter';
-      }
-      // Validation helpers (Bootstrap compatible)
-      function showFieldError(el, msg) {
-        if (!el) return;
-        el.classList.add('is-invalid');
-        let fb = el.parentNode.querySelector('.invalid-feedback');
-        if (!fb) {
-          fb = document.createElement('div');
-          fb.className = 'invalid-feedback';
-          el.parentNode.appendChild(fb);
-        }
-        fb.textContent = msg || 'Champ invalide';
-      }
-
-      function clearFieldError(el) {
-        if (!el) return;
-        el.classList.remove('is-invalid');
-        const fb = el.parentNode.querySelector('.invalid-feedback');
-        if (fb) fb.textContent = '';
-      }
-
-      function validateModalForm() {
-        let ok = true;
-        const f = modalForm;
-        ['date', 'type', 'numero_bon_manuscrit', 'operateur', 'libelle', 'montant'].forEach((name) => {
-          const el = f.querySelector('[name="' + name + '"]');
-          clearFieldError(el);
-          if (!el) return;
-          const v = (el.value || '').toString().trim();
-          if (!v) {
-            showFieldError(el, 'Ce champ est requis');
-            ok = false;
-            return;
-          }
-          if (name === 'montant') {
-            const n = Number(v);
-            if (!isFinite(n) || n <= 0) {
-              showFieldError(el, 'Montant doit être > 0');
-              ok = false;
-            }
-          }
-        });
-        return ok;
-      }
-      modalForm.addEventListener('submit', function(ev) {
-        ev.preventDefault();
-        // keep native fallback if JS deliberately disabled on the form element
-        if (!(window.fetch && FormData)) return modalForm.submit();
-        // client validation: if invalid, focus first invalid field and abort
-        if (!validateModalForm()) {
-          const firstInvalid = modalForm.querySelector('.is-invalid');
-          if (firstInvalid) firstInvalid.focus();
-          return;
-        }
-        setLoading(true,
-          '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>  Envoi');
-        const fd = new FormData(modalForm);
-        fetch('?page=caisse&action=add', {
-          method: 'POST',
-          body: fd,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-          },
-          credentials: 'same-origin'
-        }).then(async (res) => {
-          setLoading(false);
-          const ctype = (res.headers.get('content-type') || '');
-          const isJson = ctype.indexOf('application/json') !== -1;
-          if (!res.ok) {
-            const txt = await res.text().catch(() => res.statusText);
-            throw new Error(txt || 'Erreur réseau');
-          }
-          if (!isJson) {
-            const body = await res.text().catch(() => '<no-body>');
-            const snippet = (body || '').trim().slice(0, 2000);
-            throw new Error('Réponse inattendue — serveur a renvoyé du HTML/texte:\n' + snippet);
-          }
-          return res.json();
-        }).then((json) => {
-          if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');
-
-          // keep modal OPEN after successful submit (user closes it explicitly)
+        // When modal opens: copy any values from inline form and focus date (or set today)
+        modalEl.addEventListener('shown.bs.modal', function () {
           try {
-            // reset for rapid successive entries and focus first field
-            modalForm.reset();
+            const get = (name) => (inlineForm.querySelector('[name="' + name + '"]') || {}).value || '';
+            ['date', 'type', 'numero_bon_manuscrit', 'operateur', 'libelle', 'montant'].forEach((n) => {
+              const el = modalForm.querySelector('[name="' + n + '"]');
+              if (!el) return;
+              const v = get(n);
+              if (v) el.value = v;
+              else if (n === 'date' && !el.value) el.value = new Date().toISOString().slice(0, 10);
+            });
             const first = modalForm.querySelector('input,select,textarea');
             if (first) first.focus();
-        // mark that we performed a successful add while modal was open
-        window.__caisseDirty = true;
-            const tBody = document.querySelector('.table-responsive .table tbody');
-            if (tBody && json.item) {
-              const it = json.item;
-              const format = (v) => (Number(v || 0)).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              });
-              const recette = (it.type === 'entree') ? format(it.montant) : format(0);
-              const depense = (it.type === 'sortie') ? format(it.montant) : format(0);
-              const solde = (typeof it.solde !== 'undefined') ? format(it.solde) : '—';
+          } catch (e) {
+            /* silent */
+          }
+        });
 
-              // avoid duplicate optimistic row if server already returned the row (fast responses)
-              if (it._id && tBody.querySelector('tr[data-inserted-id="' + it._id + '"]')) {
-                /* already present, skip optimistic append */
-              } else {
-                const row = document.createElement('tr');
-                row.dataset.temp = '1';
-                if (it._id) row.dataset.insertedId = it._id;
-                row.innerHTML = '<td>' + (it.date || '') + '</td>' +
-                  '<td>' + (it.type || '') + '</td>' +
-                  '<td>' + (it.numero_bon_manuscrit || '') + '</td>' +
-                  '<td>' + (it.operateur || '') + '</td>' +
-                  '<td>' + (it.libelle || '') + '</td>' +
-                  '<td class="text-end">' + recette + '</td>' +
-                  '<td class="text-end">' + depense + '</td>' +
-                  '<td class="text-end">' + solde + '</td>' +
-                  '<td>\u2014</td>';
-                // append temporarily (will be replaced by server partial)
-                tBody.appendChild(row);
-              }
+        // Clear modal on hide to avoid stale values
+        modalEl.addEventListener('hidden.bs.modal', function () {
+          try {
+            modalForm.reset();
+          } catch (e) {
+            /* silent */
+          }
+
+          // If the user added one or more entries while the modal was open,
+          // refresh the page when they explicitly close the modal so the
+          // whole UI (filters, totals, sidebars) is consistent.
+          try {
+            if (window.__caisseDirty) {
+              // small delay to let the hide animation finish
+              setTimeout(() => {
+                window.__caisseDirty = false;
+                window.location.reload();
+              }, 150);
             }
           } catch (e) {
-            console.error('optimistic append error', e);
+            /* silent */
+          }
+          submitBtn.disabled = on;
+          submitBtn.innerHTML = on ? (text || 'En cours...') : 'Ajouter';
+        }
+          // Validation helpers (Bootstrap compatible)
+          function showFieldError(el, msg) {
+            if (!el) return;
+            el.classList.add('is-invalid');
+            let fb = el.parentNode.querySelector('.invalid-feedback');
+            if (!fb) {
+              fb = document.createElement('div');
+              fb.className = 'invalid-feedback';
+              el.parentNode.appendChild(fb);
+            }
+            fb.textContent = msg || 'Champ invalide';
           }
 
-          // show brief success notice then replace tbody via partial fetch (no full reload)
-          try {
-            const notice = document.createElement('div');
-            notice.className = 'alert alert-success mt-3';
-            notice.textContent = 'Opération ajoutée — prête pour la suivante.';
-            modalForm.closest('.card')?.querySelector('.card-body')?.prepend(notice);
+          function clearFieldError(el) {
+            if (!el) return;
+            el.classList.remove('is-invalid');
+            const fb = el.parentNode.querySelector('.invalid-feedback');
+            if (fb) fb.textContent = '';
+          }
 
-            // fetch updated tbody and replace it in-place; fallback to full reload on error
-            fetch('?page=caisse&action=list_partial', {
-                credentials: 'same-origin',
-                cache: 'no-store',
-                headers: {
-                  'X-Requested-With': 'XMLHttpRequest'
+          function validateModalForm() {
+            let ok = true;
+            const f = modalForm;
+            ['date', 'type', 'numero_bon_manuscrit', 'operateur', 'libelle', 'montant'].forEach((name) => {
+              const el = f.querySelector('[name="' + name + '"]');
+              clearFieldError(el);
+              if (!el) return;
+              const v = (el.value || '').toString().trim();
+              if (!v) {
+                showFieldError(el, 'Ce champ est requis');
+                ok = false;
+                return;
+              }
+              if (name === 'montant') {
+                const n = Number(v);
+                if (!isFinite(n) || n <= 0) {
+                  showFieldError(el, 'Montant doit être > 0');
+                  ok = false;
                 }
-              })
-              .then(r => {
-                if (!r.ok) return Promise.reject('Impossible de récupérer la liste (status ' + r.status +
-                  ')');
-                const rowCount = Number(r.headers.get('X-Row-Count') || -1);
-                return r.text().then(html => ({
-                  html,
-                  rowCount
-                }));
-              })
-              .then(({
-                html,
-                rowCount
-              }) => {
+              }
+            });
+            return ok;
+          }
+          modalForm.addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            // keep native fallback if JS deliberately disabled on the form element
+            if (!(window.fetch && FormData)) return modalForm.submit();
+            // client validation: if invalid, focus first invalid field and abort
+            if (!validateModalForm()) {
+              const firstInvalid = modalForm.querySelector('.is-invalid');
+              if (firstInvalid) firstInvalid.focus();
+              return;
+            }
+            setLoading(true,
+              '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>  Envoi');
+            const fd = new FormData(modalForm);
+            fetch('?page=caisse&action=add', {
+              method: 'POST',
+              body: fd,
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+              },
+              credentials: 'same-origin'
+            }).then(async (res) => {
+              setLoading(false);
+              const ctype = (res.headers.get('content-type') || '');
+              const isJson = ctype.indexOf('application/json') !== -1;
+              if (!res.ok) {
+                const txt = await res.text().catch(() => res.statusText);
+                throw new Error(txt || 'Erreur réseau');
+              }
+              if (!isJson) {
+                const body = await res.text().catch(() => '<no-body>');
+                const snippet = (body || '').trim().slice(0, 2000);
+                throw new Error('Réponse inattendue — serveur a renvoyé du HTML/texte:\n' + snippet);
+              }
+              return res.json();
+            }).then((json) => {
+              if (!json || !json.success) throw new Error(json && json.error ? json.error : 'Échec');
+
+              // keep modal OPEN after successful submit (user closes it explicitly)
+              try {
+                // reset for rapid successive entries and focus first field
+                modalForm.reset();
+                const first = modalForm.querySelector('input,select,textarea');
+                if (first) first.focus();
+                // mark that we performed a successful add while modal was open
+                window.__caisseDirty = true;
                 const tBody = document.querySelector('.table-responsive .table tbody');
-                if (!tBody) return location.reload();
-                const tmp = document.createElement('tbody');
-                tmp.innerHTML = html.trim();
-                const rows = tmp.querySelectorAll('tr');
-                if (!rows.length) return location.reload();
+                if (tBody && json.item) {
+                  const it = json.item;
+                  const format = (v) => (Number(v || 0)).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  });
+                  const recette = (it.type === 'entree') ? format(it.montant) : format(0);
+                  const depense = (it.type === 'sortie') ? format(it.montant) : format(0);
+                  const solde = (typeof it.solde !== 'undefined') ? format(it.solde) : '—';
 
-                // Replace safely and remove any optimistic temp rows
-                tBody.innerHTML = tmp.innerHTML;
-                tBody.querySelectorAll('tr[data-temp="1"]').forEach(n => n.remove());
-
-                // Remove transient notice and trigger a layout refresh
-                const notice = modalForm.closest('.card')?.querySelector('.alert-success');
-                if (notice) setTimeout(() => notice.remove(), 1500);
-                window.dispatchEvent(new Event('resize'));
-
-                if (rowCount >= 0 && rowCount !== tBody.querySelectorAll('tr').length) {
-                  console.warn('Caisse: expected rows', rowCount, 'but DOM has', tBody.querySelectorAll(
-                    'tr').length);
+                  // avoid duplicate optimistic row if server already returned the row (fast responses)
+                  if (it._id && tBody.querySelector('tr[data-inserted-id="' + it._id + '"]')) {
+                    /* already present, skip optimistic append */
+                  } else {
+                    const row = document.createElement('tr');
+                    row.dataset.temp = '1';
+                    if (it._id) row.dataset.insertedId = it._id;
+                    row.innerHTML = '<td>' + (it.date || '') + '</td>' +
+                      '<td>' + (it.type || '') + '</td>' +
+                      '<td>' + (it.numero_bon_manuscrit || '') + '</td>' +
+                      '<td>' + (it.operateur || '') + '</td>' +
+                      '<td>' + (it.libelle || '') + '</td>' +
+                      '<td class="text-end">' + recette + '</td>' +
+                      '<td class="text-end">' + depense + '</td>' +
+                      '<td class="text-end">' + solde + '</td>' +
+                      '<td>\u2014</td>';
+                    // append temporarily (will be replaced by server partial)
+                    tBody.appendChild(row);
+                  }
                 }
-              }).catch((err) => {
-                console.error('Failed to refresh caisse list:', err);
+              } catch (e) {
+                console.error('optimistic append error', e);
+              }
+
+              // show brief success notice then replace tbody via partial fetch (no full reload)
+              try {
+                const notice = document.createElement('div');
+                notice.className = 'alert alert-success mt-3';
+                notice.textContent = 'Opération ajoutée — prête pour la suivante.';
+                modalForm.closest('.card')?.querySelector('.card-body')?.prepend(notice);
+
+                // fetch updated tbody and replace it in-place; fallback to full reload on error
+                fetch('?page=caisse&action=list_partial', {
+                  credentials: 'same-origin',
+                  cache: 'no-store',
+                  headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                  }
+                })
+                  .then(r => {
+                    if (!r.ok) return Promise.reject('Impossible de récupérer la liste (status ' + r.status +
+                      ')');
+                    const rowCount = Number(r.headers.get('X-Row-Count') || -1);
+                    return r.text().then(html => ({
+                      html,
+                      rowCount
+                    }));
+                  })
+                  .then(({
+                    html,
+                    rowCount
+                  }) => {
+                    const tBody = document.querySelector('.table-responsive .table tbody');
+                    if (!tBody) return location.reload();
+                    const tmp = document.createElement('tbody');
+                    tmp.innerHTML = html.trim();
+                    const rows = tmp.querySelectorAll('tr');
+                    if (!rows.length) return location.reload();
+
+                    // Replace safely and remove any optimistic temp rows
+                    tBody.innerHTML = tmp.innerHTML;
+                    tBody.querySelectorAll('tr[data-temp="1"]').forEach(n => n.remove());
+
+                    // Remove transient notice and trigger a layout refresh
+                    const notice = modalForm.closest('.card')?.querySelector('.alert-success');
+                    if (notice) setTimeout(() => notice.remove(), 1500);
+                    window.dispatchEvent(new Event('resize'));
+
+                    if (rowCount >= 0 && rowCount !== tBody.querySelectorAll('tr').length) {
+                      console.warn('Caisse: expected rows', rowCount, 'but DOM has', tBody.querySelectorAll(
+                        'tr').length);
+                    }
+                  }).catch((err) => {
+                    console.error('Failed to refresh caisse list:', err);
+                    location.reload();
+                  });
+              } catch (e) {
                 location.reload();
-              });
-          } catch (e) {
-            location.reload();
-          }
+              }
 
-        }).catch((err) => {
-          setLoading(false);
-          const msg = err && err.message ? err.message : 'Erreur lors de l\'envoi';
-          alert('Échec : ' + msg);
-        });
-      });
+            }).catch((err) => {
+              setLoading(false);
+              const msg = err && err.message ? err.message : 'Erreur lors de l\'envoi';
+              alert('Échec : ' + msg);
+            });
+          });
 
-    })();
+      })();
     </script>
 
   </div>

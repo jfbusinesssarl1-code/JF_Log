@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    // Session started in front controller (public/index.php)
 }
 ?>
 <!DOCTYPE html>
@@ -9,113 +9,318 @@ if (session_status() === PHP_SESSION_NONE) {
 <head>
     <?php $title = 'Modifier - Stock';
     require __DIR__ . '/_layout_head.php'; ?>
+    <style>
+        .edit-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .edit-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .card-header-custom {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 24px;
+            border-bottom: none;
+        }
+        
+        .card-header-custom h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .form-section {
+            padding: 28px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-control, .form-select {
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+        
+        .readonly-field {
+            background: #f9fafb;
+            color: #6b7280;
+        }
+        
+        .operation-toggle {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .operation-option {
+            flex: 1;
+            position: relative;
+        }
+        
+        .operation-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .operation-label {
+            display: block;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .operation-option input[type="radio"]:checked + .operation-label {
+            background: #4facfe;
+            color: white;
+            border-color: #4facfe;
+        }
+        
+        .operation-label:hover {
+            border-color: #4facfe;
+        }
+        
+        .suggestions-dropdown {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.2s ease;
+        }
+        
+        .suggestion-item:hover {
+            background: #f9fafb;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .btn-action-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            padding: 0 28px 28px;
+        }
+        
+        .btn-primary-custom {
+            flex: 1;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+        }
+        
+        .btn-secondary-custom {
+            flex: 1;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            color: #374151;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary-custom:hover {
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+        
+        @media (max-width: 768px) {
+            .edit-container {
+                padding: 12px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+            
+            .btn-action-group {
+                flex-direction: column;
+                padding: 0 20px 20px;
+            }
+            
+            .card-header-custom h2 {
+                font-size: 20px;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-secondary mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="?page=dashboard"
-                style="margin-right:10%;">
-                Compta
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <!-- <div class="collapse navbar-collapse" id="navbarNav"> -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="?page=journal">Journal</a></li>
-                <li class="nav-item"><a class="nav-link" href="?page=grandlivre">Grand-Livre</a></li>
-                <li class="nav-item"><a class="nav-link" href="?page=balance">Balance</a></li>
-                <li class="nav-item"><a class="nav-link" href="?page=stock">Fiche de Stock</a></li>
-                <li class="nav-item"><a class="nav-link" href="?page=releve">Relevé</a></li>
-                <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin'): ?>
-                    <li class="nav-item"><a class="nav-link text-success fw-bold" href="?page=register">⚙️ Gestion
-                            Utilisateurs</a></li>
-                <?php endif; ?>
-            </ul>
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><span class="nav-link">👤
-                        <?= htmlspecialchars($_SESSION['user']['username'] ?? 'Utilisateur') ?>
-                        (<?= htmlspecialchars($_SESSION['user']['role'] ?? 'user') ?>)</span></li>
-                <li class="nav-item"><a class="nav-link text-danger fw-bold" href="?page=logout">Déconnexion</a></li>
-            </ul>
-            <!-- </div> -->
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h2>Modifier une opération de stock</h2>
-        <form method="post" action="?page=stock&action=edit&id=<?= urlencode($entry['_id']) ?>" class="mt-4">
-            <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <label for="date" class="form-label">Date</label>
-                    <input type="date" name="date" id="date" class="form-control"
-                        value="<?= htmlspecialchars($entry['date'] ?? '') ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label for="operation" class="form-label">Opération</label>
-                    <select name="operation" id="operation" class="form-select" required>
-                        <option value="entree" <?= ($entry['entree']['qte'] ?? 0) > 0 ? 'selected' : '' ?>>Entrée
-                        </option>
-                        <option value="sortie" <?= ($entry['sortie']['qte'] ?? 0) > 0 ? 'selected' : '' ?>>Sortie
-                        </option>
-                    </select>
-                </div>
+    <?php include __DIR__ . '/navbar.php'; ?>
+    
+    <div class="edit-container">
+        <div class="edit-card">
+            <div class="card-header-custom">
+                <h2>
+                    <i class="bi bi-box-seam"></i>
+                    Modifier l'opération de stock
+                </h2>
             </div>
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <label for="compte_search" class="form-label">Compte</label>
-                    <div class="position-relative">
-                        <input type="text" id="compte_search" class="form-control"
-                            placeholder="Rechercher un compte (code ou libellé)">
-                        <div id="compte_suggestions" class="list-group"
-                            style="position:absolute;z-index:1050;width:100%;max-height:240px;overflow:auto;display:none;">
+            
+            <form method="post" action="?page=stock&action=edit&id=<?= urlencode($entry['_id']) ?>" id="editStockForm">
+                <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
+                <input type="hidden" name="id" value="<?= urlencode($entry['_id']) ?>">
+                
+                <!-- Zone d'alertes pour messages d'erreur/succès -->
+                <div id="editStockAlert" style="display:none; margin: 24px; margin-bottom: 1rem;">
+                  <div id="editStockAlertContent"></div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="date" class="form-label">
+                                <i class="bi bi-calendar3"></i> Date
+                            </label>
+                            <input type="date" name="date" id="date" class="form-control"
+                                value="<?= htmlspecialchars($entry['date'] ?? '') ?>" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-arrow-left-right"></i> Type d'opération
+                            </label>
+                            <div class="operation-toggle">
+                                <div class="operation-option">
+                                    <input type="radio" name="operation" id="operation_entree" value="entree" 
+                                        <?= ($entry['entree']['qte'] ?? 0) > 0 ? 'checked' : '' ?> required>
+                                    <label class="operation-label" for="operation_entree">
+                                        <i class="bi bi-arrow-down-circle"></i> Entrée
+                                    </label>
+                                </div>
+                                <div class="operation-option">
+                                    <input type="radio" name="operation" id="operation_sortie" value="sortie" 
+                                        <?= ($entry['sortie']['qte'] ?? 0) > 0 ? 'checked' : '' ?> required>
+                                    <label class="operation-label" for="operation_sortie">
+                                        <i class="bi bi-arrow-up-circle"></i> Sortie
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="compte_search" class="form-label">
+                                <i class="bi bi-search"></i> Rechercher un compte
+                            </label>
+                            <input type="text" id="compte_search" class="form-control"
+                                placeholder="Tapez le code ou le libellé du compte...">
+                            <div id="compte_suggestions" class="suggestions-dropdown" style="display:none;"></div>
+                            <input type="hidden" name="compte" id="compte">
+                            <input type="text" id="compte_display" class="form-control mt-2 readonly-field"
+                                placeholder="Compte sélectionné" readonly>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="intitule" class="form-label">
+                                <i class="bi bi-tag"></i> Intitulé compte
+                            </label>
+                            <input type="text" name="intitule" id="intitule" class="form-control readonly-field"
+                                value="<?= htmlspecialchars($entry['intitule'] ?? '') ?>" required readonly>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="lieu" class="form-label">
+                                <i class="bi bi-geo-alt"></i> Lieu
+                            </label>
+                            <input type="text" name="lieu" id="lieu" class="form-control"
+                                value="<?= htmlspecialchars($entry['lieu'] ?? '') ?>" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="designation" class="form-label">
+                                <i class="bi bi-card-text"></i> Désignation
+                            </label>
+                            <input type="text" name="designation" id="designation" class="form-control"
+                                value="<?= htmlspecialchars($entry['designation'] ?? '') ?>" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="quantite" class="form-label">
+                                <i class="bi bi-box"></i> Quantité
+                            </label>
+                            <input type="number" step="0.01" name="quantite" id="quantite" class="form-control"
+                                value="<?= ($entry['entree']['qte'] ?? $entry['sortie']['qte'] ?? '') ?>" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="pu" class="form-label">
+                                <i class="bi bi-currency-dollar"></i> Prix Unitaire
+                            </label>
+                            <input type="number" step="0.01" name="pu" id="pu" class="form-control"
+                                value="<?= ($entry['entree']['pu'] ?? $entry['sortie']['pu'] ?? '') ?>" required>
                         </div>
                     </div>
-                    <input type="hidden" name="compte" id="compte">
-                    <input type="text" id="compte_display" class="form-control mt-2" placeholder="Compte sélectionné"
-                        readonly>
                 </div>
-                <div class="col-md-6">
-                    <label for="intitule" class="form-label">Intitulé compte</label>
-                    <input type="text" name="intitule" id="intitule" class="form-control"
-                        value="<?= htmlspecialchars($entry['intitule'] ?? '') ?>" required readonly>
+                
+                <div class="btn-action-group">
+                    <button type="submit" class="btn-primary-custom" id="editStockSubmitBtn">
+                        <i class="bi bi-check-circle"></i> Enregistrer
+                    </button>
+                    <button type="button" class="btn-primary-custom" id="editStockReloadBtn" style="display:none;">
+                        <i class="bi bi-arrow-clockwise"></i> Recharger
+                    </button>
+                    <a href="?page=stock" class="btn-secondary-custom">
+                        <i class="bi bi-x-circle"></i> Annuler
+                    </a>
                 </div>
-            </div>
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <label for="lieu" class="form-label">Lieu</label>
-                    <input type="text" name="lieu" id="lieu" class="form-control"
-                        value="<?= htmlspecialchars($entry['lieu'] ?? '') ?>" required>
-                </div>
-            </div>
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <label for="designation" class="form-label">Désignation</label>
-                    <input type="text" name="designation" id="designation" class="form-control"
-                        value="<?= htmlspecialchars($entry['designation'] ?? '') ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label for="quantite" class="form-label">Quantité</label>
-                    <input type="number" step="0.01" name="quantite" id="quantite" class="form-control"
-                        value="<?= ($entry['entree']['qte'] ?? $entry['sortie']['qte'] ?? '') ?>" required>
-                </div>
-            </div>
-            <div class="row g-2 mb-2">
-                <div class="col-md-6">
-                    <label for="pu" class="form-label">Prix Unitaire</label>
-                    <input type="number" step="0.01" name="pu" id="pu" class="form-control"
-                        value="<?= ($entry['entree']['pu'] ?? $entry['sortie']['pu'] ?? '') ?>" required>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button type="submit" class="btn btn-success w-100">Enregistrer</button>
-                </div>
-            </div>
-        </form>
-        <a href="?page=stock" class="btn btn-secondary mt-3">Retour à la fiche de stock</a>
+            </form>
+        </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
         const currentCompte = "<?= htmlspecialchars($entry['compte'] ?? '') ?>";
 
@@ -126,9 +331,13 @@ if (session_status() === PHP_SESSION_NONE) {
                     inputId: 'compte_search',
                     suggestionsId: 'compte_suggestions',
                     renderItemHtml: function (c) {
-                        return `<div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button type="button" class="btn btn-primary" data-action="choose">Choisir</button>
+                        return `<div class="suggestion-item">
+                                <div><strong>${AccountSearch.escapeHtml(c.code)}</strong> — ${AccountSearch.escapeHtml(c.label)}</div>
+                                <div class="btn-group btn-group-sm mt-2" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-action="choose">
+                                        <i class="bi bi-check-circle"></i> Choisir
+                                    </button>
+                                </div>
                             </div>`;
                     },
                     onChoose: function (item) {
@@ -176,6 +385,80 @@ if (session_status() === PHP_SESSION_NONE) {
                 intituleInput.value = '';
             }
         }
+
+        // Gestion de la soumission AJAX du formulaire d'édition
+        const editStockForm = document.getElementById('editStockForm');
+        const editStockAlert = document.getElementById('editStockAlert');
+        const editStockAlertContent = document.getElementById('editStockAlertContent');
+        const editStockSubmitBtn = document.getElementById('editStockSubmitBtn');
+        const editStockReloadBtn = document.getElementById('editStockReloadBtn');
+
+        function showEditAlert(message, type = 'danger') {
+          const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+          editStockAlertContent.innerHTML = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+              ${message}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          `;
+          editStockAlert.style.display = 'block';
+        }
+
+        function hideEditAlert() {
+          editStockAlert.style.display = 'none';
+          editStockAlertContent.innerHTML = '';
+        }
+
+        if (editStockForm) {
+          editStockForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideEditAlert();
+            
+            const quantiteInput = document.getElementById('quantite');
+            const q = parseFloat(quantiteInput.value || '0');
+            
+            // Validation côté client
+            if (!q || q <= 0) {
+              showEditAlert('Quantité invalide', 'danger');
+              return false;
+            }
+
+            // Soumettre via AJAX
+            const formData = new FormData(editStockForm);
+            
+            try {
+              editStockSubmitBtn.disabled = true;
+              const response = await fetch(editStockForm.action, {
+                method: 'POST',
+                body: formData
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                showEditAlert(data.message || 'Opération modifiée avec succès', 'success');
+                // Masquer le bouton Enregistrer et afficher le bouton Recharger
+                editStockSubmitBtn.style.display = 'none';
+                editStockReloadBtn.style.display = 'block';
+              } else {
+                showEditAlert(data.error || 'Une erreur est survenue', 'danger');
+                editStockSubmitBtn.disabled = false;
+              }
+            } catch (error) {
+              console.error('Erreur lors de la soumission:', error);
+              showEditAlert('Erreur réseau: ' + error.message, 'danger');
+              editStockSubmitBtn.disabled = false;
+            }
+          });
+
+          // Bouton recharger
+          if (editStockReloadBtn) {
+            editStockReloadBtn.addEventListener('click', function() {
+              location.reload();
+            });
+          }
+        }
+
     </script>
     <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>

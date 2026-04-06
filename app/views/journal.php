@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
-  session_start();
+  // Session started in front controller (public/index.php)
 }
 ?>
 <!DOCTYPE html>
@@ -45,11 +45,25 @@ if (session_status() === PHP_SESSION_NONE) {
       </div>
       <div class="col-md-2">
         <a class="btn btn-outline-secondary w-100 mb-2" href="?page=journal">Afficher tout</a>
-        <a class="btn btn-outline-secondary w-100 position-fixed" style="max-width:150px; bottom:80px; right: 2%;"
-          href="?page=journal&action=export&format=pdf&compte=<?= urlencode($filters['compte'] ?? '') ?>&lieu=<?= urlencode($filters['lieu'] ?? '') ?>&date_debut=<?= urlencode($filters['date_debut'] ?? '') ?>&date_fin=<?= urlencode($filters['date_fin'] ?? '') ?>">Exporter
-          PDF</a>
       </div>
     </form>
+
+    <!-- Export PDF Button - Desktop and Mobile -->
+    <div class="no-print">
+      <!-- Desktop version -->
+      <a class="btn btn-export-pdf d-none d-md-inline-flex" 
+        href="?page=journal&action=export&format=pdf&<?= http_build_query($filters) ?>"
+        style="position: fixed; bottom: 80px; right: 2%; z-index: 1070;">
+        <i class="bi bi-file-earmark-pdf me-2"></i> Exporter PDF
+      </a>
+      <!-- Mobile version -->
+      <a class="btn btn-export-pdf-mobile d-md-none" 
+        href="?page=journal&action=export&format=pdf&<?= http_build_query($filters) ?>"
+        style="position: fixed; bottom: 80px; right: 16px; z-index: 1070;"
+        title="Exporter PDF">
+        <i class="bi bi-file-earmark-pdf"></i>
+      </a>
+    </div>
 
     <div class="table-responsive shadow-sm rounded-3" style="font-size: small;">
       <table class="table table-bordered align-middle mb-0">
@@ -78,7 +92,8 @@ if (session_status() === PHP_SESSION_NONE) {
                   <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
                     <a href="?page=journal&action=edit&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-warning"
                       style="font-size: 0.75rem;">Modifier</a>
-                    <a href="?page=journal&action=delete&id=<?= $entry['_id'] ?>" class="btn btn-sm btn-danger"
+                    <?php $csrfToken = \App\Core\Csrf::getToken(); ?>
+                    <a href="?page=journal&action=delete&id=<?= $entry['_id'] ?>&token=<?= urlencode($csrfToken) ?>" class="btn btn-sm btn-danger"
                       onclick="return confirm('Confirmer la suppression ?');" style="font-size: 0.75rem;">Supprimer</a>
                   <?php else: ?>
                     —
@@ -99,12 +114,100 @@ if (session_status() === PHP_SESSION_NONE) {
       </table>
     </div>
 
-    <!-- bouton pour afficher le modal -->
+    <!-- Pagination Section -->
+    <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+      <nav aria-label="Pagination" class="mt-4 mb-4">
+        <ul class="pagination justify-content-center">
+
+          <!-- Texte informatif -->
+          <li class="page-item disabled">
+            <span class="page-link"><?= htmlspecialchars($pagination->getDisplayMessage()) ?></span>
+          </li>
+
+          <!-- Bouton Précédent -->
+
+          <?php if ($pagination->hasPreviousPage()): ?>
+            <li class="page-item">
+              <a class="page-link" href="?page=journal&page_num=1&<?= http_build_query($filters) ?>" aria-label="Première">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=journal&page_num=<?= $pagination->getPreviousPage() ?>&<?= http_build_query($filters) ?>"
+                aria-label="Précédent">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+          <?php else: ?>
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;&laquo;</span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;</span>
+            </li>
+          <?php endif; ?>
+
+          <!-- Numéros de pages -->
+          <?php foreach ($pagination->getPageNumbers(2) as $pageNum): ?>
+            <?php if ($pageNum === '...'): ?>
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            <?php elseif ($pageNum == $pagination->getCurrentPage()): ?>
+              <li class="page-item active">
+                <span class="page-link"><?= $pageNum ?></span>
+              </li>
+            <?php else: ?>
+              <li class="page-item">
+                <a class="page-link"
+                  href="?page=journal&page_num=<?= $pageNum ?>&<?= http_build_query($filters) ?>"><?= $pageNum ?></a>
+              </li>
+            <?php endif; ?>
+          <?php endforeach; ?>
+
+          <!-- Bouton Suivant -->
+          <?php if ($pagination->hasNextPage()): ?>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=journal&page_num=<?= $pagination->getNextPage() ?>&<?= http_build_query($filters) ?>"
+                aria-label="Suivant">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link"
+                href="?page=journal&page_num=<?= $pagination->getTotalPages() ?>&<?= http_build_query($filters) ?>"
+                aria-label="Dernière">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+              </a>
+            </li>
+          <?php else: ?>
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;&raquo;</span>
+            </li>
+          <?php endif; ?>
+        </ul>
+      </nav>
+    <?php endif; ?>
+
     <div class="fixed-action-btn no-print">
       <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin'])): ?>
+        <!-- Version desktop -->
         <button class="btn btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#journalAddModal"
           title="Ajouter une écriture"
-          style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">nouvelle opération</button>
+          style="font-weight: bold; font-size: large; position: fixed; right: 2%; bottom: 2%;">
+          <i class="bi bi-plus-circle me-2"></i> Nouvelle opération
+        </button>
+        <!-- Version mobile FAB -->
+        <button class="btn btn-primary d-md-none fab fab-primary" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+          title="Ajouter une écriture"
+          style="position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          <i class="bi bi-plus-lg" style="font-size: 24px;"></i>
+        </button>
       <?php endif; ?>
     </div>
 
@@ -183,12 +286,20 @@ if (session_status() === PHP_SESSION_NONE) {
                 </div>
 
                 <div class="col-md-3">
+                  <input type="number" step="0.01" min="0.01" name="quantite" class="form-control" id="quantite"
+                    placeholder="Quantité" required>
+                </div>
+                <div class="col-md-3">
+                  <input type="number" step="0.01" min="0.01" name="prix_unitaire" class="form-control"
+                    id="prix_unitaire" placeholder="Prix unitaire" required>
+                </div>
+                <div class="col-md-3">
                   <input type="number" step="0.01" name="debit" class="form-control" id="debit" placeholder="Débit"
-                    required>
+                    readonly>
                 </div>
                 <div class="col-md-3">
                   <input type="number" step="0.01" name="credit" class="form-control" id="credit" placeholder="Crédit"
-                    required>
+                    readonly>
                 </div>
               </div>
             </div>
@@ -294,8 +405,10 @@ if (session_status() === PHP_SESSION_NONE) {
       const intituleDeb = document.getElementById('intitule_debitInput').value.trim();
       const intituleCre = document.getElementById('intitule_creditInput').value.trim();
       const libelle = document.getElementById('libelle').value.trim();
-      const debit = document.getElementById('debit').value;
-      const credit = document.getElementById('credit').value;
+      const quantite = document.getElementById('quantite').value;
+      const prixUnitaire = document.getElementById('prix_unitaire').value;
+      const debitEl = document.getElementById('debit');
+      const creditEl = document.getElementById('credit');
       let errors = [];
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) errors.push('Date invalide');
       if (compteDeb.length < 1 || compteDeb.length > 32) errors.push('Compte débit invalide');
@@ -303,16 +416,39 @@ if (session_status() === PHP_SESSION_NONE) {
       if (intituleDeb.length < 1 || intituleDeb.length > 64) errors.push('Intitulé compte débit invalide');
       if (intituleCre.length < 1 || intituleCre.length > 64) errors.push('Intitulé compte crédit invalide');
       if (libelle.length < 1 || libelle.length > 64) errors.push('Libellé invalide');
-      if (!debit || isNaN(debit) || parseFloat(debit) <= 0) errors.push('Débit invalide');
-      if (!credit || isNaN(credit) || parseFloat(credit) <= 0) errors.push('Crédit invalide');
-      if (!isNaN(debit) && !isNaN(credit) && Math.abs(parseFloat(debit) - parseFloat(credit)) > 0.001) errors.push(
-        'Le montant débit doit être égal au montant crédit');
+      if (!quantite || isNaN(quantite) || parseFloat(quantite) <= 0) errors.push('Quantité invalide');
+      if (!prixUnitaire || isNaN(prixUnitaire) || parseFloat(prixUnitaire) <= 0) errors.push('Prix unitaire invalide');
+      if (!errors.length) {
+        const total = parseFloat(quantite) * parseFloat(prixUnitaire);
+        if (debitEl) debitEl.value = total.toFixed(2);
+        if (creditEl) creditEl.value = total.toFixed(2);
+      }
       if (errors.length) {
         alert(errors.join('\n'));
         return false;
       }
       return true;
     }
+
+    function updateJournalTotals() {
+      const quantiteInput = document.getElementById('quantite');
+      const prixUnitaireInput = document.getElementById('prix_unitaire');
+      const debitEl = document.getElementById('debit');
+      const creditEl = document.getElementById('credit');
+      if (!quantiteInput || !prixUnitaireInput || !debitEl || !creditEl) return;
+      const q = parseFloat(quantiteInput.value || '0');
+      const pu = parseFloat(prixUnitaireInput.value || '0');
+      const total = (isNaN(q) || isNaN(pu)) ? 0 : (q * pu);
+      debitEl.value = total > 0 ? total.toFixed(2) : '';
+      creditEl.value = total > 0 ? total.toFixed(2) : '';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const quantiteInput = document.getElementById('quantite');
+      const prixUnitaireInput = document.getElementById('prix_unitaire');
+      if (quantiteInput) quantiteInput.addEventListener('input', updateJournalTotals);
+      if (prixUnitaireInput) prixUnitaireInput.addEventListener('input', updateJournalTotals);
+    });
 
     // AJAX submit: keep Journal modal open after successful add and reset form for the next entry
     (function () {

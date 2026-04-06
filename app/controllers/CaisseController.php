@@ -16,8 +16,46 @@ class CaisseController extends Controller
       'operateur' => $_GET['operateur'] ?? '',
       'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? ''
     ];
-    $items = $model->getAll($filters);
-    $this->render('caisse', ['items' => $items, 'filters' => $filters]);
+
+    // Déterminer le nombre de pages pour afficher la dernière par défaut
+    $itemsPerPage = 20;
+
+    // Compter le nombre total d'éléments pour déterminer la dernière page
+    $query = [];
+    if (!empty($filters['date_debut']) || !empty($filters['date_fin'])) {
+      $range = [];
+      if (!empty($filters['date_debut']))
+        $range['$gte'] = $filters['date_debut'];
+      if (!empty($filters['date_fin']))
+        $range['$lte'] = $filters['date_fin'];
+      if ($range)
+        $query['date'] = $range;
+    }
+    if (!empty($filters['type'])) {
+      $query['type'] = $filters['type'];
+    }
+    if (!empty($filters['operateur'])) {
+      $query['operateur'] = $filters['operateur'];
+    }
+    if (!empty($filters['numero_bon_manuscrit'])) {
+      $query['numero_bon_manuscrit'] = $filters['numero_bon_manuscrit'];
+    }
+
+    $totalCount = $model->countAll($query);
+    $totalPages = ceil($totalCount / $itemsPerPage);
+
+    // Si page_num n'est pas fourni, afficher la dernière page
+    $page = isset($_GET['page_num']) ? (int) $_GET['page_num'] : max(1, $totalPages);
+
+    $result = $model->getAllWithPagination($filters, $page, $itemsPerPage);
+    $items = $result['items'];
+    $pagination = $result['pagination'];
+
+    $this->render('caisse', [
+      'items' => $items,
+      'filters' => $filters,
+      'pagination' => $pagination
+    ]);
   }
 
   // Retourne uniquement le <tbody> (utilisé pour refresh partiel via AJAX)
@@ -57,7 +95,8 @@ class CaisseController extends Controller
         echo "<td class=\"text-end\">$depense</td>\n";
         echo "<td class=\"text-end\">$solde</td>\n";
         if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])) {
-          echo "<td><a class=\"btn btn-sm btn-primary\" href=\"?page=caisse&action=edit&id=$id\">Modifier</a> <a class=\"btn btn-sm btn-danger\" href=\"?page=caisse&action=delete&id=$id\" onclick=\"return confirm('Supprimer ?')\">Supprimer</a></td>\n";
+          $csrfToken = \App\Core\Csrf::getToken();
+          echo "<td><a class=\"btn btn-sm btn-primary\" href=\"?page=caisse&action=edit&id=$id\">Modifier</a> <a class=\"btn btn-sm btn-danger\" href=\"?page=caisse&action=delete&id=$id&token=" . urlencode($csrfToken) . "\" onclick=\"return confirm('Supprimer ?')\">Supprimer</a></td>\n";
         } else {
           echo "<td>—</td>\n";
         }
@@ -98,11 +137,16 @@ class CaisseController extends Controller
 
       // Server-side validation (return JSON on XHR)
       $errors = [];
-      if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $errors[] = 'Date invalide';
-      if (!in_array($type, ['entree', 'sortie'])) $errors[] = 'Type invalide';
-      if ($libelle === '' || strlen($libelle) > 255) $errors[] = 'Libellé invalide';
-      if ($montant === '' || !is_numeric($montant) || floatval($montant) <= 0) $errors[] = 'Montant invalide';
-      if ($operateur === '' || strlen($operateur) > 128) $errors[] = 'Opérateur invalide';
+      if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date))
+        $errors[] = 'Date invalide';
+      if (!in_array($type, ['entree', 'sortie']))
+        $errors[] = 'Type invalide';
+      if ($libelle === '' || strlen($libelle) > 255)
+        $errors[] = 'Libellé invalide';
+      if ($montant === '' || !is_numeric($montant) || floatval($montant) <= 0)
+        $errors[] = 'Montant invalide';
+      if ($operateur === '' || strlen($operateur) > 128)
+        $errors[] = 'Opérateur invalide';
 
       if (!empty($errors)) {
         if ($isAjax) {
@@ -205,7 +249,11 @@ class CaisseController extends Controller
   {
     $this->requireRole(['caissier', 'admin']);
     $id = $_GET['id'] ?? null;
-    if ($id) {
+    $token = $_GET['token'] ?? '';
+    if (!\App\Core\Csrf::checkToken($token)) {
+      if (session_status() === PHP_SESSION_NONE) session_start();
+      $_SESSION['flash_error'] = 'Erreur CSRF - opération annulée';
+    } elseif ($id) {
       $model = new CaisseModel();
       $model->delete($id);
     }
@@ -228,8 +276,18 @@ class CaisseController extends Controller
       echo "User agent: " . ($_SERVER['HTTP_USER_AGENT'] ?? 'n/a') . "\n";
       exit;
     }
+
+    // Récupérer les filtres de la même manière que dans index()
+    $filters = [
+      'date_debut' => $_GET['date_debut'] ?? '',
+      'date_fin' => $_GET['date_fin'] ?? '',
+      'type' => $_GET['type'] ?? '',
+      'operateur' => $_GET['operateur'] ?? '',
+      'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? ''
+    ];
+
     $model = new CaisseModel();
-    $items = $model->getAll();
+    $items = $model->getAll($filters);
 
     // Build header with logo and company info
     $logoPath = realpath(__DIR__ . '/../../assets/images/logo.png');
@@ -246,10 +304,29 @@ class CaisseController extends Controller
     }
     $header .= '<div style="font-size:12px;margin-top:6px;line-height:1.2;">N° RCCM : CD/KNG/RCCM/24-B-D4138<br>ID-NAT : 01-F4200-N 37015G<br>N° IMPOT : A2504347D<br>N° d’affiliation INSS : 1022461300<br>N° d’immatriculation A L’INPP : A2504347D</div>';
     $header .= '</div>';
-    $header .= '<div style="flex:1 1 auto;text-align:right;font-size:12px;color:#333;">' . date('d/m/Y H:i') . '</div>';
+    $header .= '<div style="flex:1 1 auto;text-align:right;font-size:12px;color:#333;">' . \App\Helpers\PdfHelper::formatPrintedAt() . '</div>';
     $header .= '</div>';
     $header .= '<div style="height:4px;background:#0d6efd;margin:8px 0 12px 0"></div>';
     $header .= '<h2 style="text-align:center;font-weight:700;margin:6px 0 12px 0">Livre de caisse</h2>';
+
+    // Afficher les filtres actifs si présents
+    $activeFilters = [];
+    if (!empty($filters['date_debut']))
+      $activeFilters[] = 'Depuis: ' . htmlspecialchars($filters['date_debut']);
+    if (!empty($filters['date_fin']))
+      $activeFilters[] = 'Jusqu\'au: ' . htmlspecialchars($filters['date_fin']);
+    if (!empty($filters['type']))
+      $activeFilters[] = 'Type: ' . htmlspecialchars($filters['type']);
+    if (!empty($filters['operateur']))
+      $activeFilters[] = 'Opérateur: ' . htmlspecialchars($filters['operateur']);
+    if (!empty($filters['numero_bon_manuscrit']))
+      $activeFilters[] = 'N° Bon: ' . htmlspecialchars($filters['numero_bon_manuscrit']);
+
+    if (!empty($activeFilters)) {
+      $header .= '<div style="background:#f8f9fa;padding:8px;margin-bottom:12px;border:1px solid #dee2e6;border-radius:4px;">';
+      $header .= '<strong>Filtres appliqués:</strong> ' . implode(' | ', $activeFilters);
+      $header .= '</div>';
+    }
 
     // build simple HTML table
     $html = $header;

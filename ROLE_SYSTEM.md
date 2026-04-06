@@ -25,7 +25,12 @@ Le système utilise un contrôle d'accès basé sur les rôles (RBAC) pour sécu
 - ❌ Stock
 - ❌ Gestion utilisateurs
 
-### 4. **user** (Utilisateur)
+### 4. **stock_manager** (Gestionnaire de Stock)
+- ✅ Stock (gestion complète: ajouter, modifier, supprimer, exporter)
+- ❌ Accès exclusif au Stock uniquement
+- ❌ Journal, Balance, Grand Livre, Relevé, Dashboard, Gestion utilisateurs
+
+### 5. **user** (Utilisateur)
 - ✅ Dashboard (accès limité)
 - ❌ Tous les autres services
 
@@ -60,10 +65,10 @@ public function index() {
 | Journal | accountant, manager, admin |
 | Balance | accountant, manager, admin |
 | Grand Livre | accountant, manager, admin |
-| Stock | manager, admin |
+| Stock | manager, admin, stock_manager |
 | Relevé | accountant, manager, admin |
 | Dashboard | Tous (filtré par rôle) |
-| Gestion Utilisateurs | admin |
+| Gestion Utilisateurs | admin, manager |
 
 ## Base de données
 
