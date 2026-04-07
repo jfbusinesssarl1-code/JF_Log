@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../_layout_head.php';
+include __DIR__ . '/../navbar.php';
 
 // Déterminer la semaine actuelle pour le sélecteur
 $today = date('Y-m-d');

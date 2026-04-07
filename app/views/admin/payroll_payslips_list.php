@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../_layout_head.php';
+include __DIR__ . '/../navbar.php';
 ?>
 
 <div class="container-fluid mt-5">
