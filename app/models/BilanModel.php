@@ -284,15 +284,15 @@ class BilanModel extends Model
     {
         $structure = [
             'actif' => [
-                'immobilise' => ['total' => 0, 'accounts' => []],
-                'circulant' => ['total' => 0, 'accounts' => []],
-                'tresorerie' => ['total' => 0, 'accounts' => []]
+                'immobilise' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []],
+                'circulant' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []],
+                'tresorerie' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []]
             ],
             'passif' => [
-                'capitaux_propres' => ['total' => 0, 'accounts' => []],
-                'non_courant' => ['total' => 0, 'accounts' => []],
-                'circulant' => ['total' => 0, 'accounts' => []],
-                'tresorerie' => ['total' => 0, 'accounts' => []]
+                'capitaux_propres' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []],
+                'non_courant' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []],
+                'circulant' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []],
+                'tresorerie' => ['debit' => 0, 'credit' => 0, 'total' => 0, 'accounts' => []]
             ]
         ];
 
@@ -304,34 +304,53 @@ class BilanModel extends Model
                 continue;
             }
 
-            $value = isset($account['value']) ? $account['value'] : abs($account['solde'] ?? 0);
+            $debit = isset($account['debit']) ? floatval($account['debit']) : 0;
+            $credit = isset($account['credit']) ? floatval($account['credit']) : 0;
 
             // Actif
             if ($category === 'actif_immobilise') {
                 $structure['actif']['immobilise']['accounts'][] = $account;
-                $structure['actif']['immobilise']['total'] += $value;
+                $structure['actif']['immobilise']['debit'] += $debit;
+                $structure['actif']['immobilise']['credit'] += $credit;
             } elseif (in_array($category, ['stocks', 'creances'])) {
                 $structure['actif']['circulant']['accounts'][] = $account;
-                $structure['actif']['circulant']['total'] += $value;
+                $structure['actif']['circulant']['debit'] += $debit;
+                $structure['actif']['circulant']['credit'] += $credit;
             } elseif ($category === 'tresorerie_actif') {
                 $structure['actif']['tresorerie']['accounts'][] = $account;
-                $structure['actif']['tresorerie']['total'] += $value;
+                $structure['actif']['tresorerie']['debit'] += $debit;
+                $structure['actif']['tresorerie']['credit'] += $credit;
             }
             // Passif
             elseif ($category === 'capitaux_propres') {
                 $structure['passif']['capitaux_propres']['accounts'][] = $account;
-                $structure['passif']['capitaux_propres']['total'] += $value;
+                $structure['passif']['capitaux_propres']['debit'] += $debit;
+                $structure['passif']['capitaux_propres']['credit'] += $credit;
             } elseif ($category === 'emprunts') {
                 $structure['passif']['non_courant']['accounts'][] = $account;
-                $structure['passif']['non_courant']['total'] += $value;
+                $structure['passif']['non_courant']['debit'] += $debit;
+                $structure['passif']['non_courant']['credit'] += $credit;
             } elseif ($category === 'passif_circulant') {
                 $structure['passif']['circulant']['accounts'][] = $account;
-                $structure['passif']['circulant']['total'] += $value;
+                $structure['passif']['circulant']['debit'] += $debit;
+                $structure['passif']['circulant']['credit'] += $credit;
             } elseif ($category === 'tresorerie_passif') {
                 $structure['passif']['tresorerie']['accounts'][] = $account;
-                $structure['passif']['tresorerie']['total'] += $value;
+                $structure['passif']['tresorerie']['debit'] += $debit;
+                $structure['passif']['tresorerie']['credit'] += $credit;
             }
         }
+
+        // Calculate section totals from debit and credit totals
+        foreach ($structure['actif'] as $sectionKey => &$section) {
+            $section['total'] = $section['debit'] - $section['credit'];
+        }
+        unset($section);
+
+        foreach ($structure['passif'] as $sectionKey => &$section) {
+            $section['total'] = $section['debit'] - $section['credit'];
+        }
+        unset($section);
 
         // Calculate totals
         $structure['actif']['total'] = $structure['actif']['immobilise']['total'] +

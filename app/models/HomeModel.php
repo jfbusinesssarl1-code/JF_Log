@@ -16,7 +16,7 @@ class HomeModel
 
     public function insert(array $item)
     {
-        $item['created_at'] = new \MongoDB\BSON\UTCDateTime();
+        $item['created_at'] = new UTCDateTime();
         $this->collection->insertOne($item);
     }
 
@@ -29,7 +29,7 @@ class HomeModel
     public function findById($id)
     {
         try {
-            return $this->collection->findOne(['_id' => new \MongoDB\BSON\ObjectId($id)]);
+            return $this->collection->findOne(['_id' => new ObjectId($id)]);
         } catch (\Exception $e) {
             return null;
         }
@@ -38,9 +38,9 @@ class HomeModel
     public function update($id, array $data)
     {
         try {
-            $data['updated_at'] = new \MongoDB\BSON\UTCDateTime();
+            $data['updated_at'] = new UTCDateTime();
             $this->collection->updateOne(
-                ['_id' => new \MongoDB\BSON\ObjectId($id)],
+                ['_id' => new ObjectId($id)],
                 ['$set' => $data]
             );
             return true;
@@ -52,7 +52,7 @@ class HomeModel
     public function delete($id)
     {
         try {
-            $oid = new \MongoDB\BSON\ObjectId($id);
+            $oid = new ObjectId($id);
             
             // Récupérer le document avant suppression pour accéder aux images
             $item = $this->collection->findOne(['_id' => $oid]);
