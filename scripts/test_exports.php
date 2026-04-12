@@ -97,6 +97,8 @@ if ($baseUrl) {
     '?page=journal&action=export&format=pdf',
     '?page=grandlivre&action=export&format=pdf',
     '?page=balance&action=export&format=pdf',
+    '?page=bilan&action=export&format=pdf&type=current',
+    '?page=bilan&action=export&format=pdf&type=initial',
     '?page=stock&action=export&format=pdf',
     '?page=releve&action=export&format=pdf',
     '?page=dashboard&action=export&format=pdf',

@@ -100,7 +100,7 @@ class BilanModel extends Model
         $balances = $balanceModel->getBalance();
 
         $bilan = [
-            'title' => 'Bilan en Cours',
+            'title' => 'Bilan en Cours - ' . date('d/m/Y'),
             'date' => date('Y-m-d'),
             'accounts' => []
         ];
@@ -174,6 +174,18 @@ class BilanModel extends Model
     public function getPeriodicCopy($id)
     {
         return $this->collection_copies->findOne(['_id' => new ObjectId($id)]);
+    }
+
+    /**
+     * Get the latest active periodic copy (current balance)
+     */
+    public function getLatestPeriodicCopy()
+    {
+        $filter = ['status' => ['$ne' => 'archived']];
+        $copy = $this->collection_copies->findOne($filter, [
+            'sort' => ['created_at' => -1]
+        ]);
+        return $copy;
     }
 
     /**

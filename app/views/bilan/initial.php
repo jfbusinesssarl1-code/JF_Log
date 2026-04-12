@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <?php include __DIR__ . '/../_layout_head.php'; ?>
@@ -102,6 +102,17 @@
                         <a href="?page=bilan" class="btn btn-primary btn-action">
                             <i class="fas fa-eye"></i> Voir Bilan en Cours
                         </a>
+                        <!-- Export PDF Button -->
+                        <a class="btn btn-export-pdf d-none d-md-inline-flex btn-action"
+                           href="?page=bilan&amp;action=export&amp;format=pdf&amp;type=initial"
+                           title="Exporter PDF">
+                            <i class="bi bi-file-earmark-pdf me-2"></i> Exporter PDF
+                        </a>
+                        <a class="btn btn-export-pdf-mobile d-md-none btn-action"
+                           href="?page=bilan&amp;action=export&amp;format=pdf&amp;type=initial"
+                           title="Exporter PDF">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                        </a>
                     </div>
                 </div>
 
@@ -129,9 +140,9 @@
                                 <h4 class="mb-0"><i class="fas fa-plus-circle"></i> ACTIF</h4>
                             </div>
                             <div class="card-body">
-                                <!-- Actif Immobilisé -->
+                                <!-- Actif ImmobilisÃ© -->
                                 <div class="bilan-section">
-                                    <h5 class="text-primary">Actif Immobilisé</h5>
+                                    <h5 class="text-primary">Actif ImmobilisÃ©</h5>
                                     <div class="table-responsive">
                                         <table class="table table-sm">
                                             <thead>
@@ -147,19 +158,19 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="total-row">
-                                                    <td><strong>Total Actif Immobilisé</strong></td>
+                                                    <td><strong>Total Actif ImmobilisÃ©</strong></td>
                                                     <td colspan="2"><strong><?php echo formatValue($structure['actif']['immobilise']['total']); ?></strong></td>
                                                 </tr>
                                             </tbody>
@@ -185,12 +196,12 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
@@ -205,9 +216,9 @@
                                     </div>
                                 </div>
 
-                                <!-- Trésorerie Actif -->
+                                <!-- TrÃ©sorerie Actif -->
                                 <div class="bilan-section">
-                                    <h5 class="text-primary">Trésorerie Actif</h5>
+                                    <h5 class="text-primary">TrÃ©sorerie Actif</h5>
                                     <div class="table-responsive">
                                         <table class="table table-sm">
                                             <thead>
@@ -223,19 +234,19 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="total-row">
-                                                    <td><strong>Total Trésorerie Actif</strong></td>
+                                                    <td><strong>Total TrÃ©sorerie Actif</strong></td>
                                                     <td colspan="2"><strong><?php echo formatValue($structure['actif']['tresorerie']['total']); ?></strong></td>
                                                 </tr>
                                             </tbody>
@@ -276,12 +287,12 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
@@ -314,12 +325,12 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
@@ -352,12 +363,12 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
@@ -372,9 +383,9 @@
                                     </div>
                                 </div>
 
-                                <!-- Trésorerie Passif -->
+                                <!-- TrÃ©sorerie Passif -->
                                 <div class="bilan-section">
-                                    <h5 class="text-danger">Trésorerie Passif</h5>
+                                    <h5 class="text-danger">TrÃ©sorerie Passif</h5>
                                     <div class="table-responsive">
                                         <table class="table table-sm">
                                             <thead>
@@ -390,19 +401,19 @@
                                                         <td><?php echo htmlspecialchars($account['code'] . ' - ' . $account['name']); ?></td>
                                                         <td><?php echo formatValue($account['value'] ?? 0); ?></td>
                                                         <td>
-                                                            <a href="?page=bilan&action=edit_account&code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
+                                                            <a href="?page=bilan&amp;action=edit_account&amp;code=<?php echo urlencode($account['code']); ?>" class="btn btn-xs btn-warning" title="Modifier le compte">
                                                                 <i class="fas fa-edit"></i> Modifier
                                                             </a>
-                                                            <a href="?page=bilan&action=remove_account&code=<?php echo urlencode($account['code']); ?>"
+                                                            <a href="?page=bilan&amp;action=remove_account&amp;code=<?php echo urlencode($account['code']); ?>"
                                                                class="btn btn-xs btn-danger"
-                                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')">
+                                                               onclick="return confirm('ÃŠtes-vous sÃ»r de vouloir supprimer ce compte ?')">
                                                                 <i class="fas fa-trash"></i> Supprimer
                                                             </a>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="total-row">
-                                                    <td><strong>Total Trésorerie Passif</strong></td>
+                                                    <td><strong>Total TrÃ©sorerie Passif</strong></td>
                                                     <td colspan="2"><strong><?php echo formatValue($structure['passif']['tresorerie']['total']); ?></strong></td>
                                                 </tr>
                                             </tbody>
@@ -430,7 +441,7 @@
                     <h5 class="modal-title" id="addAccountModalLabel">Ajouter un Compte au Bilan Initial</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="?page=bilan&action=add_account" id="accountForm">
+                <form method="POST" action="?page=bilan&amp;action=add_account" id="accountForm">
                     <input type="hidden" id="old_account_code" name="old_account_code" value="">
                     <div class="modal-body">
                         <div class="row">
@@ -443,7 +454,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="date" class="form-label">Date d'élaboration</label>
+                                    <label for="date" class="form-label">Date d'Ã©laboration</label>
                                     <input type="date" class="form-control" id="date" name="date"
                                            value="<?php echo htmlspecialchars($bilan['date'] ?? date('Y-m-d')); ?>" required>
                                 </div>
@@ -453,23 +464,23 @@
                         <div class="mb-3">
                             <label for="type" class="form-label">Type (ACTIF ou PASSIF)</label>
                             <select class="form-select" id="type" name="type" required onchange="updateCategories()">
-                                <option value="">Sélectionnez un type...</option>
+                                <option value="">SÃ©lectionnez un type...</option>
                                 <option value="actif">ACTIF</option>
                                 <option value="passif">PASSIF</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label for="category" class="form-label">Catégorie</label>
+                            <label for="category" class="form-label">CatÃ©gorie</label>
                             <select class="form-select" id="category" name="category" required>
-                                <option value="">Sélectionnez d'abord un type...</option>
+                                <option value="">SÃ©lectionnez d'abord un type...</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
                             <label for="account_code" class="form-label">Compte</label>
                             <select class="form-select" id="account_code" name="account_code" required>
-                                <option value="">Sélectionnez un compte...</option>
+                                <option value="">SÃ©lectionnez un compte...</option>
                                 <?php
                                 $compteModel = new \App\Models\CompteModel();
                                 $comptes = $compteModel->getAll();
@@ -504,23 +515,23 @@
             if (type === '') {
                 const opt = document.createElement('option');
                 opt.value = '';
-                opt.textContent = 'Sélectionnez d\'abord un type...';
+                opt.textContent = 'SÃ©lectionnez d\'abord un type...';
                 categorySelect.appendChild(opt);
                 return;
             }
 
-            const options = [{ value: '', text: 'Sélectionnez une catégorie...' }];
+            const options = [{ value: '', text: 'SÃ©lectionnez une catÃ©gorie...' }];
 
             if (type === 'actif') {
-                options.push({ value: 'actif_immobilise', text: 'ACTIF IMMOBILISÉ' });
+                options.push({ value: 'actif_immobilise', text: 'ACTIF IMMOBILISÃ‰' });
                 options.push({ value: 'stocks', text: 'STOCKS (Actif Circulant)' });
-                options.push({ value: 'creances', text: 'CRÉANCES (Actif Circulant)' });
-                options.push({ value: 'tresorerie_actif', text: 'TRÉSORERIE ACTIF' });
+                options.push({ value: 'creances', text: 'CRÃ‰ANCES (Actif Circulant)' });
+                options.push({ value: 'tresorerie_actif', text: 'TRÃ‰SORERIE ACTIF' });
             } else if (type === 'passif') {
                 options.push({ value: 'capitaux_propres', text: 'CAPITAUX PROPRES' });
                 options.push({ value: 'emprunts', text: 'EMPRUNTS (Passif Non Courant)' });
                 options.push({ value: 'passif_circulant', text: 'FOURNISSEURS / DETTES (Passif Circulant)' });
-                options.push({ value: 'tresorerie_passif', text: 'TRÉSORERIE PASSIF' });
+                options.push({ value: 'tresorerie_passif', text: 'TRÃ‰SORERIE PASSIF' });
             }
 
             options.forEach(option => {
@@ -533,7 +544,7 @@
 
         function setModalForAdd() {
             const form = document.getElementById('accountForm');
-            form.action = '?page=bilan&action=add_account';
+            form.action = '?page=bilan&amp;action=add_account';
             document.getElementById('addAccountModalLabel').textContent = 'Ajouter un Compte au Bilan Initial';
             document.getElementById('submitAccountButton').textContent = 'Ajouter';
             document.getElementById('old_account_code').value = '';
@@ -543,9 +554,9 @@
 
         function setModalForEdit(account) {
             const form = document.getElementById('accountForm');
-            form.action = '?page=bilan&action=update_account';
+            form.action = '?page=bilan&amp;action=update_account';
             document.getElementById('addAccountModalLabel').textContent = 'Modifier un Compte du Bilan Initial';
-            document.getElementById('submitAccountButton').textContent = 'Mettre à jour';
+            document.getElementById('submitAccountButton').textContent = 'Mettre Ã  jour';
 
             document.getElementById('old_account_code').value = account.code;
             document.getElementById('type').value = account.type || 'actif';

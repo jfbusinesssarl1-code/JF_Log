@@ -67,11 +67,26 @@
                             <button class="btn btn-success btn-action" data-bs-toggle="modal" data-bs-target="#savePeriodicModal">
                                 <i class="fas fa-save"></i> Sauvegarder Copie Périodique
                             </button>
-                            <a href="?page=bilan&action=initial" class="btn btn-primary btn-action">
+                            <a href="?page=bilan&amp;action=initial" class="btn btn-primary btn-action">
                                 <i class="fas fa-edit"></i> Gérer Bilan Initial
                             </a>
-                            <a href="?page=bilan&action=copies" class="btn btn-info btn-action">
+                            <a href="?page=bilan&amp;action=copies" class="btn btn-info btn-action">
                                 <i class="fas fa-history"></i> Voir Copies
+                            </a>
+                        <?php else: ?>
+                            <!-- Export PDF Button pour copies et bilan initial -->
+                            <a class="btn btn-export-pdf d-none d-md-inline-flex btn-action"
+                               href="?page=bilan&amp;action=export&amp;format=pdf&amp;type=<?php echo $type; ?><?php echo ($type === 'copy' && isset($bilan['_id'])) ? '&amp;copy_id=' . $bilan['_id'] : ''; ?>"
+                               title="Exporter PDF">
+                                <i class="bi bi-file-earmark-pdf me-2"></i> Exporter PDF
+                            </a>
+                            <a class="btn btn-export-pdf-mobile d-md-none btn-action"
+                               href="?page=bilan&amp;action=export&amp;format=pdf&amp;type=<?php echo $type; ?><?php echo ($type === 'copy' && isset($bilan['_id'])) ? '&amp;copy_id=' . $bilan['_id'] : ''; ?>"
+                               title="Exporter PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <a href="?page=bilan" class="btn btn-secondary btn-action">
+                                <i class="fas fa-arrow-left"></i> Retour
                             </a>
                         <?php endif; ?>
                     </div>

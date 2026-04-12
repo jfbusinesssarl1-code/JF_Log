@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 
 // Charger l'autoload Composer (corrigé)
 $autoload = __DIR__ . '/../vendor/autoload.php';
-if (file_exists(filename: $autoload)) {
+if (file_exists($autoload)) {
     require_once $autoload;
 }
 
@@ -117,6 +117,8 @@ switch ($page) {
             $controller->initial();
         } elseif ($action === 'view_copy') {
             $controller->viewCopy();
+        } elseif ($action === 'export') {
+            $controller->export();
         } else {
             $controller->index();
         }
