@@ -577,7 +577,7 @@ class PayrollController extends Controller
         }
 
         $payslipModel = new PayslipModel();
-        $existingPayslip = $payslipModel->getBySiteAndWeek($siteId, $weekOf);
+        $existingPayslip = $payslipModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
         if ($existingPayslip && !empty($existingPayslip['archived'])) {
             session_start();
             $_SESSION['flash_warning'] = 'Cette semaine est déjà archivée et ne peut être modifiée. Vous pouvez consulter la fiche de paie.';
@@ -1443,10 +1443,10 @@ class PayrollController extends Controller
             $siteId = (string)$site['_id'];
             
             // Vérifier s'il y a des présences pour ce chantier cette semaine
-            $attendances = $attendanceModel->getBySiteAndWeek($siteId, $weekOf);
+            $attendances = $attendanceModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
             
             if (!empty($attendances)) {
-                $payslip = $payslipModel->getBySiteAndWeek($siteId, $weekOf);
+                $payslip = $payslipModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
                 
                 if (!$payslip) {
                     // Créer une structure de payslip temporaire à partir des attendances
@@ -1644,10 +1644,10 @@ class PayrollController extends Controller
         
         foreach ($allSites as $site) {
             $siteId = (string)$site['_id'];
-            $attendances = $attendanceModel->getBySiteAndWeek($siteId, $weekOf);
+            $attendances = $attendanceModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
             
             if (!empty($attendances)) {
-                $payslip = $payslipModel->getBySiteAndWeek($siteId, $weekOf);
+                $payslip = $payslipModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
                 
                 if (!$payslip) {
                     $payslip = $this->generatePayslipFromAttendances($site, $siteId, $attendances, $weekOf, $weekStart, $weekEnd);

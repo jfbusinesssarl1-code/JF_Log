@@ -73,8 +73,28 @@ class AttendanceModel extends Model
     }
 
     /**
-     * Récupère la présence d'un ouvrier pour une semaine
+     * Récupère les présences d'un chantier pour une période donnée (week_start et week_end)
      */
+    public function getBySiteAndWeekRange($siteId, $weekStart, $weekEnd)
+    {
+        // Si c'est une string, convertir en ObjectId
+        if (is_string($siteId)) {
+            try {
+                $siteId = new ObjectId($siteId);
+            } catch (\Throwable $e) {
+                return [];
+            }
+        }
+        
+        return $this->collection->find(
+            [
+                'site_id' => $siteId,
+                'week_start' => $weekStart,
+                'week_end' => $weekEnd
+            ],
+            ['sort' => ['_id' => 1]]
+        )->toArray();
+    }
     public function getByWorkerAndWeek($workerId, $weekOf)
     {
         try {

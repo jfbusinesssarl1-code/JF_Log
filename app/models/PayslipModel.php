@@ -13,7 +13,7 @@ class PayslipModel extends Model
         parent::__construct();
         $this->collection = $this->db->payslips;
         try {
-            $this->collection->createIndex(['site_id' => 1, 'week_of' => 1], ['unique' => true]);
+            $this->collection->createIndex(['site_id' => 1, 'week_start' => 1, 'week_end' => 1], ['unique' => true]);
             $this->collection->createIndex(['site_id' => 1, 'week_of' => 1]);
             $this->collection->createIndex(['week_of' => 1]);
         } catch (\Throwable $e) {}
@@ -38,7 +38,11 @@ class PayslipModel extends Model
         }
 
         $result = $this->collection->updateOne(
-            ['site_id' => $siteOid, 'week_of' => $data['week_of']],
+            [
+                'site_id' => $siteOid,
+                'week_start' => $data['week_start'],
+                'week_end' => $data['week_end']
+            ],
             ['$set' => $data],
             ['upsert' => true]
         );
@@ -67,8 +71,25 @@ class PayslipModel extends Model
     }
 
     /**
-     * Récupère toutes les fiches de paie d'un chantier (inclut les archivées)
+     * Récupère une fiche de paie par site et période (week_start et week_end)
      */
+    public function getBySiteAndWeekRange($siteId, $weekStart, $weekEnd)
+    {
+        // Si c'est une string, convertir en ObjectId
+        if (is_string($siteId)) {
+            try {
+                $siteId = new ObjectId($siteId);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        return $this->collection->findOne([
+            'site_id' => $siteId,
+            'week_start' => $weekStart,
+            'week_end' => $weekEnd
+        ]);
+    }
     public function getBySite($siteId)
     {
         // Si c'est une string, convertir en ObjectId
