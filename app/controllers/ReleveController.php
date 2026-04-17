@@ -132,6 +132,11 @@ class ReleveController extends Controller
         $html .= '<td style="text-align:right">' . number_format($sumD, 2, '.', '') . '</td>';
         $html .= '<td style="text-align:right">' . number_format($sumC, 2, '.', '') . '</td>';
         $html .= '</tr>';
+        $difference = $sumD - $sumC;
+        $html .= '<tr style="font-weight:700;background:#e9ecef">';
+        $html .= '<td colspan="4">Différence (Débit - Crédit)</td>';
+        $html .= '<td colspan="2" style="text-align:right">' . number_format($difference, 2, '.', '') . '</td>';
+        $html .= '</tr>';
         $html .= '</tbody></table>';
 
         if ($format === 'pdf') {

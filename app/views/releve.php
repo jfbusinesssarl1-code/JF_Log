@@ -20,8 +20,8 @@ if (session_status() === PHP_SESSION_NONE) {
       <input type="hidden" name="page" value="releve">
       <div class="col-md-3">
         <div class="position-relative">
-          <input type="text" id="filter_compte_releve" name="compte" class="form-control" placeholder="Compte"
-            value="<?= htmlspecialchars($filters['compte'] ?? '') ?>">
+          <input type="text" id="filter_compte_releve" class="form-control" placeholder="Compte" value="">
+          <input type="hidden" id="filter_compte" name="compte" value="<?= htmlspecialchars($filters['compte'] ?? '') ?>">
           <div id="filter_compte_releve_suggestions" class="list-group"
             style="position:absolute;z-index:1050;width:100%;max-height:240px;overflow:auto;display:none;"></div>
         </div>
@@ -146,15 +146,17 @@ if (session_status() === PHP_SESSION_NONE) {
       </nav>
     <?php endif; ?>
   </div>
+  <?php require __DIR__ . '/_layout_footer.php'; ?>
 </body>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var inputEl = document.getElementById('filter_compte_releve');
+    var hiddenEl = document.getElementById('filter_compte');
 
     AccountSearch.fetchComptes().then(function () {
       // Enrichir l'input avec le label si un code de compte est déjà présent
-      var initial = inputEl.value.trim();
+      var initial = hiddenEl.value.trim();
       if (initial) {
         // Vérifier si c'est juste un code (sans label)
         if (!initial.includes(' — ')) {
@@ -174,30 +176,15 @@ if (session_status() === PHP_SESSION_NONE) {
         onChoose: function (item) {
           if (!item) return;
           inputEl.value = item.code + ' — ' + (item.label || '');
+          hiddenEl.value = item.code;
         }
       });
-    }).catch(console.error);
 
-    // Avant soumission, extraire juste le code (avant le " — ")
-    inputEl.closest('form').addEventListener('submit', function (e) {
-      var val = inputEl.value.trim();
-      if (val && val.includes(' — ')) {
-        // Extraire juste le code
-        var code = val.split(' — ')[0].trim();
-        // Créer un champ hidden temporaire avec le code seul
-        var tempInput = document.createElement('input');
-        tempInput.type = 'hidden';
-        tempInput.name = 'compte';
-        tempInput.value = code;
-        this.appendChild(tempInput);
-        // Désactiver le champ visible pour ne pas le soumettre
-        inputEl.disabled = true;
-        // Réactiver après soumission (au cas où la soumission échoue)
-        setTimeout(function () {
-          inputEl.disabled = false;
-        }, 100);
-      }
-    });
+      // clear hidden value if user clears display
+      inputEl.addEventListener('input', function () {
+        if (!this.value) hiddenEl.value = '';
+      });
+    }).catch(console.error);
   });
 </script>
 
