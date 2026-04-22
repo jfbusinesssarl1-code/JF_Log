@@ -441,7 +441,7 @@
                     <h5 class="modal-title" id="addAccountModalLabel">Ajouter un Compte au Bilan Initial</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="?page=bilan&amp;action=add_account" id="accountForm">
+                <form method="POST" action="?page=bilan&action=add_account" id="accountForm">
                     <input type="hidden" id="old_account_code" name="old_account_code" value="">
                     <div class="modal-body">
                         <div class="row">
@@ -544,7 +544,7 @@
 
         function setModalForAdd() {
             const form = document.getElementById('accountForm');
-            form.action = '?page=bilan&amp;action=add_account';
+            form.action = '?page=bilan&action=add_account';
             document.getElementById('addAccountModalLabel').textContent = 'Ajouter un Compte au Bilan Initial';
             document.getElementById('submitAccountButton').textContent = 'Ajouter';
             document.getElementById('old_account_code').value = '';
@@ -554,7 +554,7 @@
 
         function setModalForEdit(account) {
             const form = document.getElementById('accountForm');
-            form.action = '?page=bilan&amp;action=update_account';
+            form.action = '?page=bilan&action=update_account';
             document.getElementById('addAccountModalLabel').textContent = 'Modifier un Compte du Bilan Initial';
             document.getElementById('submitAccountButton').textContent = 'Mettre à jour';
 

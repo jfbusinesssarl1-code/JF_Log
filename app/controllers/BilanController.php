@@ -58,6 +58,10 @@ class BilanController extends Controller
         $this->requireRole(['admin', 'accountant', 'comptable']);
 
         $model = new BilanModel();
+        
+        // Clean up old invalid documents on first access
+        $model->cleanupInvalidDocuments();
+        
         $initialBilan = $model->getInitialBilan();
 
         if (!$initialBilan) {
@@ -95,6 +99,13 @@ class BilanController extends Controller
         $accountCode = $_POST['account_code'] ?? '';
         $value = (float) ($_POST['value'] ?? 0);
 
+        // Validation
+        if (empty($accountCode)) {
+            $_SESSION['error'] = 'Code compte obligatoire.';
+            header('Location: ?page=bilan&action=initial');
+            exit;
+        }
+
         // Get account name
         $allComptes = $compteModel->getAll();
         $accountName = '';
@@ -116,10 +127,15 @@ class BilanController extends Controller
             'solde' => $type === 'actif' ? $value : -$value
         ];
 
-        if ($model->addAccountToInitial($accountData)) {
-            $_SESSION['success'] = 'Compte ajouté au bilan initial avec succès.';
-        } else {
-            $_SESSION['error'] = 'Erreur lors de l\'ajout du compte.';
+        try {
+            if ($model->addAccountToInitial($accountData)) {
+                $_SESSION['success'] = 'Compte ajouté au bilan initial avec succès.';
+            } else {
+                $_SESSION['error'] = 'Erreur lors de l\'ajout du compte.';
+            }
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erreur: ' . $e->getMessage();
+            error_log('BilanController::addAccount error: ' . $e->getMessage());
         }
 
         header('Location: ?page=bilan&action=initial');
