@@ -22,14 +22,7 @@ class BilanModel extends Model
      */
     public function getInitialBilan()
     {
-        // First try to get the document with type 'initial'
-        $result = $this->collection_initial->findOne(['type' => 'initial']);
-        
-        // If not found, fall back to the most recent document
-        if (!$result) {
-            $result = $this->collection_initial->findOne([], ['sort' => ['created_at' => -1]]);
-        }
-        
+        $result = $this->collection_initial->findOne([], ['sort' => ['created_at' => -1]]);
         return $result ?: null;
     }
 
@@ -39,24 +32,14 @@ class BilanModel extends Model
     public function saveInitialBilan($data)
     {
         $data['updated_at'] = new \MongoDB\BSON\UTCDateTime();
-        $data['type'] = 'initial';
-        
-        // If we have an _id, update the existing document
-        if (isset($data['_id']) && $data['_id'] !== null) {
-            $result = $this->collection_initial->updateOne(
-                ['_id' => $data['_id']],
-                ['$set' => $data]
-            );
-            return $result->getModifiedCount() > 0 || $result->getUpsertedCount() > 0;
+        if (!isset($data['_id'])) {
+            $data['created_at'] = $data['updated_at'];
         }
-        
-        // Otherwise, use type-based upsert (ensures single document)
-        $result = $this->collection_initial->updateOne(
-            ['type' => 'initial'],
-            ['$set' => $data],
+        $result = $this->collection_initial->replaceOne(
+            ['_id' => $data['_id'] ?? null],
+            $data,
             ['upsert' => true]
         );
-        
         return $result->getModifiedCount() > 0 || $result->getUpsertedCount() > 0;
     }
 
@@ -65,50 +48,32 @@ class BilanModel extends Model
      */
     public function addAccountToInitial($accountData)
     {
-        try {
-            $bilan = $this->getInitialBilan();
-            if (!$bilan) {
-                $bilan = [
-                    'type' => 'initial',
-                    'title' => 'Bilan Initial',
-                    'date' => date('Y-m-d'),
-                    'accounts' => [],
-                    'created_at' => new \MongoDB\BSON\UTCDateTime(),
-                    'updated_at' => new \MongoDB\BSON\UTCDateTime()
-                ];
-            }
-
-            // Convert BSONArray to PHP array if needed
-            $accounts = isset($bilan['accounts']) ? (is_array($bilan['accounts']) ? $bilan['accounts'] : (array)$bilan['accounts']) : [];
-
-            // Check if account already exists
-            $exists = false;
-            $newAccounts = [];
-            
-            foreach ($accounts as $acc) {
-                // Convert BSONDocument to array if needed
-                $accArray = is_array($acc) ? $acc : (array)$acc;
-                
-                if ($accArray['code'] === $accountData['code']) {
-                    // Merge with existing account
-                    $newAccounts[] = array_merge($accArray, $accountData);
-                    $exists = true;
-                } else {
-                    $newAccounts[] = $accArray;
-                }
-            }
-
-            if (!$exists) {
-                $newAccounts[] = $accountData;
-            }
-
-            $bilan['accounts'] = $newAccounts;
-
-            return $this->saveInitialBilan($bilan);
-        } catch (\Exception $e) {
-            error_log('Error in addAccountToInitial: ' . $e->getMessage());
-            return false;
+        $bilan = $this->getInitialBilan();
+        if (!$bilan) {
+            $bilan = [
+                'title' => 'Bilan Initial',
+                'date' => date('Y-m-d'),
+                'accounts' => [],
+                'created_at' => new \MongoDB\BSON\UTCDateTime(),
+                'updated_at' => new \MongoDB\BSON\UTCDateTime()
+            ];
         }
+
+        // Check if account already exists
+        $exists = false;
+        foreach ($bilan['accounts'] as &$acc) {
+            if ($acc['code'] === $accountData['code']) {
+                $acc = array_merge($acc, $accountData);
+                $exists = true;
+                break;
+            }
+        }
+
+        if (!$exists) {
+            $bilan['accounts'][] = $accountData;
+        }
+
+        return $this->saveInitialBilan($bilan);
     }
 
     /**
@@ -119,13 +84,9 @@ class BilanModel extends Model
         $bilan = $this->getInitialBilan();
         if (!$bilan) return false;
 
-        // Convert BSONArray to PHP array if needed
-        $accounts = is_array($bilan['accounts']) ? $bilan['accounts'] : (array)$bilan['accounts'];
-        
-        // Filter out the account and reindex
-        $bilan['accounts'] = array_values(array_filter($accounts, function($acc) use ($accountCode) {
+        $bilan['accounts'] = array_filter($bilan['accounts'], function($acc) use ($accountCode) {
             return $acc['code'] !== $accountCode;
-        }));
+        });
 
         return $this->saveInitialBilan($bilan);
     }
@@ -343,8 +304,6 @@ class BilanModel extends Model
                 continue;
             }
 
-            // For initial balance, use the direct value instead of debit/credit calculation
-            $value = isset($account['value']) ? floatval($account['value']) : 0;
             $debit = isset($account['debit']) ? floatval($account['debit']) : 0;
             $credit = isset($account['credit']) ? floatval($account['credit']) : 0;
 
@@ -353,45 +312,45 @@ class BilanModel extends Model
                 $structure['actif']['immobilise']['accounts'][] = $account;
                 $structure['actif']['immobilise']['debit'] += $debit;
                 $structure['actif']['immobilise']['credit'] += $credit;
-                $structure['actif']['immobilise']['total'] += $value; // Use direct value for initial balance
             } elseif (in_array($category, ['stocks', 'creances'])) {
                 $structure['actif']['circulant']['accounts'][] = $account;
                 $structure['actif']['circulant']['debit'] += $debit;
                 $structure['actif']['circulant']['credit'] += $credit;
-                $structure['actif']['circulant']['total'] += $value; // Use direct value for initial balance
             } elseif ($category === 'tresorerie_actif') {
                 $structure['actif']['tresorerie']['accounts'][] = $account;
                 $structure['actif']['tresorerie']['debit'] += $debit;
                 $structure['actif']['tresorerie']['credit'] += $credit;
-                $structure['actif']['tresorerie']['total'] += $value; // Use direct value for initial balance
             }
             // Passif
             elseif ($category === 'capitaux_propres') {
                 $structure['passif']['capitaux_propres']['accounts'][] = $account;
                 $structure['passif']['capitaux_propres']['debit'] += $debit;
                 $structure['passif']['capitaux_propres']['credit'] += $credit;
-                $structure['passif']['capitaux_propres']['total'] += $value; // Use direct value for initial balance
             } elseif ($category === 'emprunts') {
                 $structure['passif']['non_courant']['accounts'][] = $account;
                 $structure['passif']['non_courant']['debit'] += $debit;
                 $structure['passif']['non_courant']['credit'] += $credit;
-                $structure['passif']['non_courant']['total'] += $value; // Use direct value for initial balance
             } elseif ($category === 'passif_circulant') {
                 $structure['passif']['circulant']['accounts'][] = $account;
                 $structure['passif']['circulant']['debit'] += $debit;
                 $structure['passif']['circulant']['credit'] += $credit;
-                $structure['passif']['circulant']['total'] += $value; // Use direct value for initial balance
             } elseif ($category === 'tresorerie_passif') {
                 $structure['passif']['tresorerie']['accounts'][] = $account;
                 $structure['passif']['tresorerie']['debit'] += $debit;
                 $structure['passif']['tresorerie']['credit'] += $credit;
-                $structure['passif']['tresorerie']['total'] += $value; // Use direct value for initial balance
             }
         }
 
-        // For initial balance, we don't need to recalculate totals from debit/credit
-        // The totals are already calculated above using direct values
-        // But we keep the old logic for compatibility with current balance calculations
+        // Calculate section totals from debit and credit totals
+        foreach ($structure['actif'] as $sectionKey => &$section) {
+            $section['total'] = $section['debit'] - $section['credit'];
+        }
+        unset($section);
+
+        foreach ($structure['passif'] as $sectionKey => &$section) {
+            $section['total'] = $section['debit'] - $section['credit'];
+        }
+        unset($section);
 
         // Calculate totals
         $structure['actif']['total'] = $structure['actif']['immobilise']['total'] +
@@ -425,20 +384,5 @@ class BilanModel extends Model
             $valueB = isset($b['value']) ? $b['value'] : 0;
             return $valueB <=> $valueA; // Descending by value
         });
-    }
-
-    /**
-     * Clean up old/invalid documents from the initial bilan collection
-     * Removes documents with null _id or without type field
-     */
-    public function cleanupInvalidDocuments()
-    {
-        // Delete documents with _id: null
-        $this->collection_initial->deleteMany(['_id' => null]);
-        
-        // Delete documents without type field (old documents)
-        $this->collection_initial->deleteMany(['type' => ['$exists' => false]]);
-        
-        return true;
     }
 }
