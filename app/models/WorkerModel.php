@@ -46,7 +46,7 @@ class WorkerModel extends Model
     }
 
     /**
-     * Récupère tous les ouvriers d'un chantier
+     * Recupere tous les ouvriers actifs d'un chantier (tries : T.T alpha, puis M.C alpha)
      */
     public function getBySite($siteId)
     {
@@ -55,10 +55,29 @@ class WorkerModel extends Model
         } catch (\Throwable $e) {
             return [];
         }
-        return $this->collection->find(
-            ['site_id' => $oid, 'status' => 'active'],
-            ['sort' => ['category' => -1, 'name' => 1]]
-        )->toArray();
+
+        $workers = $this->collection->find(['site_id' => $oid, 'status' => 'active'])->toArray();
+        $this->sortWorkers($workers);
+
+        return $workers;
+    }
+
+    /**
+     * Recupere TOUS les ouvriers d'un chantier (actifs et inactifs)
+     * Tri: Actifs (T.T alpha, M.C alpha) puis Inactifs (T.T alpha, M.C alpha)
+     */
+    public function getAllBySite($siteId)
+    {
+        try {
+            $oid = new ObjectId((string) $siteId);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $workers = $this->collection->find(['site_id' => $oid])->toArray();
+        $this->sortWorkers($workers);
+
+        return $workers;
     }
 
     /**
@@ -123,6 +142,24 @@ class WorkerModel extends Model
     }
 
     /**
+     * Réactive un ouvrier archivé
+     */
+    public function reactivate($id)
+    {
+        try {
+            $oid = new ObjectId((string) $id);
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        $result = $this->collection->updateOne(
+            ['_id' => $oid],
+            ['$set' => ['status' => 'active', 'updated_at' => date('Y-m-d H:i:s')]]
+        );
+        return ($result->getModifiedCount() > 0);
+    }
+
+    /**
      * Récupère les ouvriers T.T d'un chantier
      */
     public function getTTBySite($siteId)
@@ -152,5 +189,36 @@ class WorkerModel extends Model
             ['site_id' => $oid, 'category' => 'M.C', 'status' => 'active'],
             ['sort' => ['name' => 1]]
         )->toArray();
+    }
+
+    /**
+     * Tri metier: actifs puis inactifs, et dans chaque groupe T.T puis M.C, par nom.
+     */
+    private function sortWorkers(array &$workers)
+    {
+        usort($workers, function($a, $b) {
+            $statusCompare = $this->statusRank($a['status'] ?? 'active') <=> $this->statusRank($b['status'] ?? 'active');
+            if ($statusCompare !== 0) {
+                return $statusCompare;
+            }
+
+            $categoryCompare = $this->categoryRank($a['category'] ?? '') <=> $this->categoryRank($b['category'] ?? '');
+            if ($categoryCompare !== 0) {
+                return $categoryCompare;
+            }
+
+            return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+        });
+    }
+
+    private function statusRank($status)
+    {
+        return ((string) $status === 'active') ? 0 : 1;
+    }
+
+    private function categoryRank($category)
+    {
+        $order = ['T.T' => 0, 'M.C' => 1];
+        return $order[(string) $category] ?? 2;
     }
 }

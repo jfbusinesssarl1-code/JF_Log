@@ -125,11 +125,12 @@ include __DIR__ . '/../navbar.php';
                             <?php
                             $index = 1;
                             foreach ($workers as $worker):
+                                $isActive = ($worker['status'] === 'active');
                             ?>
-                                <tr>
+                                <tr<?= !$isActive ? ' class="table-secondary opacity-75"' : '' ?>>
                                     <td class="text-center fw-bold"><?= $index++ ?></td>
                                     <td>
-                                        <strong class="text-primary"><?= htmlspecialchars($worker['name']) ?></strong>
+                                        <strong class="<?= $isActive ? 'text-primary' : 'text-muted text-decoration-line-through' ?>"><?= htmlspecialchars($worker['name']) ?></strong>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge fs-6 px-3 py-2 <?= ($worker['category'] === 'T.T') ? 'bg-success' : 'bg-warning text-dark' ?>">
@@ -137,22 +138,30 @@ include __DIR__ . '/../navbar.php';
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge fs-6 px-3 py-2 <?= ($worker['status'] === 'active') ? 'bg-success' : 'bg-secondary' ?>">
-                                            <i class="fas fa-<?= ($worker['status'] === 'active') ? 'check' : 'pause' ?> me-1"></i>
+                                        <span class="badge fs-6 px-3 py-2 <?= ($worker['status'] === 'active') ? 'bg-success' : 'bg-danger' ?>">
+                                            <i class="fas fa-<?= ($worker['status'] === 'active') ? 'check' : 'ban' ?> me-1"></i>
                                             <?= ucfirst($worker['status']) ?>
                                         </span>
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
-                                            <a href="?page=payroll&action=editWorker&id=<?= (string) $worker['_id'] ?>&site_id=<?= (string) $site['_id'] ?>" 
-                                               class="btn btn-sm btn-outline-warning me-1">
-                                                <i class="fas fa-edit me-1"></i>Éditer
-                                            </a>
-                                            <a href="?page=payroll&action=deleteWorker&id=<?= (string) $worker['_id'] ?>&site_id=<?= (string) $site['_id'] ?>" 
-                                               class="btn btn-sm btn-outline-danger"
-                                               onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')">
-                                                <i class="fas fa-trash me-1"></i>Supprimer
-                                            </a>
+                                            <?php if ($isActive): ?>
+                                                <a href="?page=payroll&action=editWorker&id=<?= (string) $worker['_id'] ?>&site_id=<?= (string) $site['_id'] ?>" 
+                                                   class="btn btn-sm btn-outline-warning me-1">
+                                                    <i class="fas fa-edit me-1"></i>Éditer
+                                                </a>
+                                                <a href="?page=payroll&action=deleteWorker&id=<?= (string) $worker['_id'] ?>&site_id=<?= (string) $site['_id'] ?>" 
+                                                   class="btn btn-sm btn-outline-danger"
+                                                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')">
+                                                    <i class="fas fa-trash me-1"></i>Supprimer
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="?page=payroll&action=reactivateWorker&id=<?= (string) $worker['_id'] ?>&site_id=<?= (string) $site['_id'] ?>" 
+                                                   class="btn btn-sm btn-outline-success"
+                                                   onclick="return confirm('Êtes-vous sûr de vouloir réactiver cet ouvrier ?')">
+                                                    <i class="fas fa-undo me-1"></i>Réactiver
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>

@@ -198,7 +198,7 @@ class PayrollController extends Controller
     // ============ OUVRIERS ============
 
     /**
-     * Liste les ouvriers d'un chantier
+     * Liste les ouvriers d'un chantier (actifs et inactifs)
      */
     public function workers()
     {
@@ -213,7 +213,7 @@ class PayrollController extends Controller
         }
 
         $workerModel = new WorkerModel();
-        $workers = $workerModel->getBySite($siteId);
+        $workers = $workerModel->getAllBySite($siteId);
 
         $this->render('admin/payroll_workers', [
             'site' => $site,
@@ -465,6 +465,37 @@ class PayrollController extends Controller
         ]);
     }
 
+    /**
+     * Réactive un ouvrier archivé
+     */
+    public function reactivateWorker()
+    {
+        $this->requireAdmin();
+        $workerId = $_GET['id'] ?? '';
+        $siteId = $_GET['site_id'] ?? '';
+
+        $workerModel = new WorkerModel();
+        $worker = $workerModel->getById($workerId);
+
+        if (!$worker) {
+            session_start();
+            $_SESSION['flash_error'] = 'Ouvrier introuvable';
+            header('Location: ?page=payroll&action=workers&site_id=' . $siteId);
+            exit;
+        }
+
+        if ($workerModel->reactivate($workerId)) {
+            session_start();
+            $_SESSION['flash_success'] = 'Ouvrier réactivé avec succès';
+        } else {
+            session_start();
+            $_SESSION['flash_error'] = 'Erreur lors de la réactivation de l\'ouvrier';
+        }
+
+        header('Location: ?page=payroll&action=workers&site_id=' . $siteId);
+        exit;
+    }
+
     // ============ CONFIGURATION DES SALAIRES ============
 
     /**
@@ -688,6 +719,12 @@ class PayrollController extends Controller
             }
         }
 
+        if (isset($payslip['payroll']) && !empty($payslip['payroll'])) {
+            $payroll = is_array($payslip['payroll']) ? $payslip['payroll'] : iterator_to_array($payslip['payroll']);
+            $this->sortPayrollRows($payroll);
+            $payslip['payroll'] = $payroll;
+        }
+
         $this->render('admin/payroll_payslip', [
             'site' => $site,
             'week_of' => $weekOf,
@@ -757,9 +794,8 @@ class PayrollController extends Controller
         // Trier les ouvriers : T.T en premier, puis M.C
         // Convertir BSONArray en tableau PHP si nécessaire
         $payrollArray = is_array($payslip['payroll']) ? $payslip['payroll'] : iterator_to_array($payslip['payroll']);
-        $ttWorkers = array_filter($payrollArray, fn($w) => $w['category'] === 'T.T');
-        $mcWorkers = array_filter($payrollArray, fn($w) => $w['category'] === 'M.C');
-        $sortedPayroll = array_merge($ttWorkers, $mcWorkers);
+        $this->sortPayrollRows($payrollArray);
+        $sortedPayroll = $payrollArray;
 
         // Générer le HTML de la fiche de paie
         $html = '<style>
@@ -1068,9 +1104,8 @@ class PayrollController extends Controller
         }
 
         // Trier les ouvriers : T.T en premier, puis M.C
-        $ttWorkers = array_filter($payrollArray, fn($w) => $w['category'] === 'T.T');
-        $mcWorkers = array_filter($payrollArray, fn($w) => $w['category'] === 'M.C');
-        $sortedPayroll = array_merge($ttWorkers, $mcWorkers);
+        $this->sortPayrollRows($payrollArray);
+        $sortedPayroll = $payrollArray;
 
         // Générer le HTML de la fiche de présence
         $html = '<style>
@@ -2104,6 +2139,42 @@ class PayrollController extends Controller
         // Générer et télécharger le PDF
         $filename = 'rapport_synthese_hebdomadaire_' . $weekStart . '.pdf';
         $pdf->Output($filename, 'D');
+    }
+
+    /**
+     * Tri metier des lignes de paie: actifs, T.T puis M.C, puis nom alphabetique.
+     */
+    private function sortPayrollRows(array &$payrollRows)
+    {
+        usort($payrollRows, function($a, $b) {
+            $statusCompare = $this->workerStatusRank($a['status'] ?? 'active') <=> $this->workerStatusRank($b['status'] ?? 'active');
+            if ($statusCompare !== 0) {
+                return $statusCompare;
+            }
+
+            $categoryCompare = $this->workerCategoryRank($a['category'] ?? '') <=> $this->workerCategoryRank($b['category'] ?? '');
+            if ($categoryCompare !== 0) {
+                return $categoryCompare;
+            }
+
+            return strcasecmp($this->workerDisplayName($a), $this->workerDisplayName($b));
+        });
+    }
+
+    private function workerStatusRank($status)
+    {
+        return ((string) $status === 'active') ? 0 : 1;
+    }
+
+    private function workerCategoryRank($category)
+    {
+        $order = ['T.T' => 0, 'M.C' => 1];
+        return $order[(string) $category] ?? 2;
+    }
+
+    private function workerDisplayName($worker)
+    {
+        return (string) ($worker['worker_name'] ?? $worker['name'] ?? '');
     }
 
     /**

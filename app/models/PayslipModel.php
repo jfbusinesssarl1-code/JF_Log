@@ -164,7 +164,8 @@ class PayslipModel extends Model
         // Traiter chaque enregistrement de présence
         foreach ($attendances as $attendance) {
             $worker = $workerModel->getById((string) $attendance['worker_id']);
-            if (!$worker) continue;
+            // Ignorer les ouvriers inactifs ou inexistants
+            if (!$worker || $worker['status'] !== 'active') continue;
 
             $category = $worker['category'];
             $daysCount = $attendanceModel->calculateDaysWorked($attendance);
@@ -196,6 +197,17 @@ class PayslipModel extends Model
                 'weekly_salary' => round($weeklySalary, 2)
             ];
         }
+
+        // Trier les ouvriers : T.T alphabétique, puis M.C alphabétique
+        usort($payrollData, function($a, $b) {
+            // T.T avant M.C
+            if ($a['category'] !== $b['category']) {
+                $categoryOrder = ['T.T' => 0, 'M.C' => 1];
+                return ($categoryOrder[$a['category'] ?? ''] ?? 2) <=> ($categoryOrder[$b['category'] ?? ''] ?? 2);
+            }
+            // Alphabétique par nom si même catégorie
+            return strcasecmp($a['worker_name'], $b['worker_name']);
+        });
 
         // Préparer les données de synthèse avec équivalence = volume * tarif journalier
         $dailyEquivalenceTC = [];
