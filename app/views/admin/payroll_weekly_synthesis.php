@@ -105,6 +105,7 @@ $week_end_month = $months_fr[date('m', strtotime($weekEnd))] ?? date('F', strtot
                 <table class="table mb-0">
                     <thead style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-bottom: 2px solid #d1d5db;">
                         <tr>
+                            <th style="width: 60px; text-align: center; font-weight: 600; color: #374151;">N°</th>
                             <th style="font-weight: 600; color: #374151;">Chantier</th>
                             <th style="font-weight: 600; color: #374151;">Localisation</th>
                             <th style="text-align: center; font-weight: 600; color: #374151;">
@@ -144,6 +145,9 @@ $week_end_month = $months_fr[date('m', strtotime($weekEnd))] ?? date('F', strtot
                             $rowBg = ($rowNum % 2 === 0) ? '#f9fafb' : '#ffffff';
                         ?>
                             <tr style="background-color: <?= $rowBg ?>; border-bottom: 1px solid #e5e7eb;">
+                                <td style="text-align: center; padding: 15px 12px; font-weight: bold; color: #374151;">
+                                    <?= $rowNum ?>
+                                </td>
                                 <td style="padding: 15px 12px;">
                                     <strong style="color: #1f2937;"><?= htmlspecialchars($site['name'] ?? 'N/A') ?></strong>
                                 </td>
@@ -173,7 +177,7 @@ $week_end_month = $months_fr[date('m', strtotime($weekEnd))] ?? date('F', strtot
 
                             <!-- Ligne de détail repliée -->
                             <tr>
-                                <td colspan="6" style="padding: 0; border: none;">
+                                <td colspan="7" style="padding: 0; border: none;">
                                     <div class="collapse" id="site_<?= htmlspecialchars($siteId) ?>">
                                         <div style="padding: 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb;">
                                             <!-- Synthèse rapide -->

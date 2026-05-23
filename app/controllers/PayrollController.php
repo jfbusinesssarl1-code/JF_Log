@@ -1872,18 +1872,20 @@ class PayrollController extends Controller
         $html .= '<table>';
         $html .= '<thead>';
         $html .= '<tr>';
+        $html .= '<th style="width: 5%;">N°</th>';
         $html .= '<th style="width: 25%;">Nom Chantier</th>';
         $html .= '<th style="width: 25%;">Adresse Chantier</th>';
-        $html .= '<th style="width: 12%; text-align: center;">Nbre T.T</th>';
-        $html .= '<th style="width: 12%; text-align: center;">Nbre M.C</th>';
+        $html .= '<th style="width: 10%; text-align: center;">Nbre T.T</th>';
+        $html .= '<th style="width: 10%; text-align: center;">Nbre M.C</th>';
         $html .= '<th style="width: 15%; text-align: center;">Salaire total</th>';
-        $html .= '<th style="width: 11%;">Observation</th>';
+        $html .= '<th style="width: 10%;">Observation</th>';
         $html .= '</tr>';
         $html .= '</thead>';
         $html .= '<tbody>';
 
         // Vérifier que sitesWithActivity n'est pas vide
         if (!empty($sitesWithActivity)) {
+            $rowNumber = 1;
             foreach ($sitesWithActivity as $siteWithActivity) {
                 $site = $siteWithActivity['site'];
                 $payslip = $siteWithActivity['payslip'];
@@ -1905,6 +1907,7 @@ class PayrollController extends Controller
                 }
 
                 $html .= '<tr>';
+                $html .= '<td><strong>' . $rowNumber . '</strong></td>';
                 $html .= '<td><strong>' . htmlspecialchars($site['name'] ?? 'N/A') . '</strong></td>';
                 $html .= '<td>' . htmlspecialchars($site['location'] ?? 'N/A') . '</td>';
                 $html .= '<td style="text-align: center;">' . $workersTt . '</td>';
@@ -1912,9 +1915,10 @@ class PayrollController extends Controller
                 $html .= '<td style="text-align: center; font-weight: bold;">' . number_format($payslip['total_salary'] ?? 0, 2) . ' $</td>';
                 $html .= '<td></td>';
                 $html .= '</tr>';
+                $rowNumber++;
             }
         } else {
-            $html .= '<tr><td colspan="6" style="text-align: center; padding: 20px;">Aucun chantier actif trouvé pour cette période.</td></tr>';
+            $html .= '<tr><td colspan="7" style="text-align: center; padding: 20px;">Aucun chantier actif trouvé pour cette période.</td></tr>';
         }
 
         $html .= '</tbody>';
@@ -2037,8 +2041,8 @@ class PayrollController extends Controller
             $pdf->SetTextColor(255, 255, 255);
 
             // En-têtes du tableau
-            $header = ['Nom Chantier', 'Adresse Chantier', 'Nbre T.T', 'Nbre M.C', 'Salaire total', 'Observation'];
-            $widths = [45, 45, 20, 20, 25, 25];
+            $header = ['N°', 'Nom Chantier', 'Adresse Chantier', 'Nbre T.T', 'Nbre M.C', 'Salaire total', 'Observation'];
+            $widths = [10, 40, 40, 20, 20, 25, 25];
 
             foreach ($header as $i => $col) {
                 $pdf->Cell($widths[$i], 7, $col, 1, 0, 'C', true);
@@ -2051,6 +2055,7 @@ class PayrollController extends Controller
             $pdf->SetFillColor(248, 248, 248);
 
             $fill = false;
+            $rowNumber = 1;
             foreach ($sitesWithActivity as $siteWithActivity) {
                 $site = $siteWithActivity['site'];
                 $payslip = $siteWithActivity['payslip'];
@@ -2074,13 +2079,15 @@ class PayrollController extends Controller
                 $pdf->SetFillColor($fill ? 248 : 255, $fill ? 248 : 255, $fill ? 248 : 255);
                 $fill = !$fill;
 
-                $pdf->Cell($widths[0], 6, $this->truncateText($site['name'] ?? 'N/A', 20), 1, 0, 'L', true);
-                $pdf->Cell($widths[1], 6, $this->truncateText($site['location'] ?? 'N/A', 20), 1, 0, 'L', true);
-                $pdf->Cell($widths[2], 6, $workersTt, 1, 0, 'C', true);
-                $pdf->Cell($widths[3], 6, $workersMc, 1, 0, 'C', true);
-                $pdf->Cell($widths[4], 6, number_format($payslip['total_salary'] ?? 0, 2) . ' $', 1, 0, 'R', true);
-                $pdf->Cell($widths[5], 6, '', 1, 0, 'L', true);
+                $pdf->Cell($widths[0], 6, $rowNumber, 1, 0, 'C', true);
+                $pdf->Cell($widths[1], 6, $this->truncateText($site['name'] ?? 'N/A', 18), 1, 0, 'L', true);
+                $pdf->Cell($widths[2], 6, $this->truncateText($site['location'] ?? 'N/A', 18), 1, 0, 'L', true);
+                $pdf->Cell($widths[3], 6, $workersTt, 1, 0, 'C', true);
+                $pdf->Cell($widths[4], 6, $workersMc, 1, 0, 'C', true);
+                $pdf->Cell($widths[5], 6, number_format($payslip['total_salary'] ?? 0, 2) . ' $', 1, 0, 'R', true);
+                $pdf->Cell($widths[6], 6, '', 1, 0, 'L', true);
                 $pdf->Ln();
+                $rowNumber++;
             }
 
             $pdf->Ln(5);
