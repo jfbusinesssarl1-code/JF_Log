@@ -18,6 +18,28 @@ class BilanModel extends Model
     }
 
     /**
+     * Remove old malformed balance sheet documents that cannot be rendered safely.
+     */
+    public function cleanupInvalidDocuments()
+    {
+        $filter = [
+            '$nor' => [
+                ['accounts' => ['$type' => 'array']]
+            ]
+        ];
+
+        try {
+            $initialResult = $this->collection_initial->deleteMany($filter);
+            $copiesResult = $this->collection_copies->deleteMany($filter);
+
+            return $initialResult->getDeletedCount() + $copiesResult->getDeletedCount();
+        } catch (\Throwable $e) {
+            error_log('BilanModel::cleanupInvalidDocuments error: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Get the initial balance sheet
      */
     public function getInitialBilan()
