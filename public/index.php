@@ -149,6 +149,8 @@ switch ($page) {
             $controller->editWorker();
         } elseif ($action === 'deleteWorker') {
             $controller->deleteWorker();
+        } elseif ($action === 'reactivateWorker') {
+            $controller->reactivateWorker();
         } elseif ($action === 'importWorkers') {
             $controller->importWorkers();
         } elseif ($action === 'salaryConfig') {
