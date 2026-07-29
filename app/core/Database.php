@@ -9,6 +9,7 @@ class Database
 {
     private $client;
     private $db;
+    private static $connections = [];
     // public function __construct($uri = 'mongodb://localhost:27017', $dbName = 'compta')
     public function __construct($uri = null, $dbName = 'compta')
     {
@@ -25,11 +26,22 @@ class Database
 
         // Defensive: ensure there is no accidental leading/trailing whitespace
         $uri = trim($uri);
+        $cacheKey = $uri . '|' . $dbName;
+
+        if (isset(self::$connections[$cacheKey])) {
+            $this->client = self::$connections[$cacheKey]['client'];
+            $this->db = self::$connections[$cacheKey]['db'];
+            return;
+        }
 
         // Try to create the client with a short serverSelectionTimeout for fast failure on misconfiguration
         try {
             $this->client = new Client($uri, ['serverSelectionTimeoutMS' => 2000]);
             $this->db = $this->client->$dbName;
+            self::$connections[$cacheKey] = [
+                'client' => $this->client,
+                'db' => $this->db,
+            ];
         } catch (\Throwable $e) {
             // Provide a clearer, actionable error message for common dev mistakes
             $msg = "MongoDB connection failed (" . $uri . ") - " . $e->getMessage();

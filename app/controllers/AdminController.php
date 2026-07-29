@@ -65,6 +65,7 @@ class AdminController extends Controller
         $this->handleUserPost();
       } else {
         $this->handlePost($currentSection);
+        $this->clearPublicHomeCache($currentSection);
       }
       // After handling, reload admin page to show changes / flash
       header('Location: ?page=admin&section=' . urlencode($currentSection));
@@ -684,6 +685,7 @@ class AdminController extends Controller
       } else {
         $homeModel = new \App\Models\HomeModel();
         $homeModel->delete($itemId);
+        $this->clearPublicHomeCache($section);
         $_SESSION['flash'] = 'Élément du carrousel supprimé avec succès';
       }
     }
@@ -708,6 +710,7 @@ class AdminController extends Controller
       } else {
         $aboutModel = new \App\Models\AboutModel();
         $aboutModel->delete($itemId);
+        $this->clearPublicHomeCache($section);
         $_SESSION['flash'] = 'Élément À propos supprimé avec succès';
       }
     }
@@ -732,6 +735,7 @@ class AdminController extends Controller
       } else {
         $serviceModel = new \App\Models\ServiceModel();
         $serviceModel->delete($serviceId);
+        $this->clearPublicHomeCache($section);
         $_SESSION['flash'] = 'Service supprimé avec succès';
       }
     }
@@ -756,6 +760,7 @@ class AdminController extends Controller
       } else {
         $activityModel = new \App\Models\ActivityModel();
         $activityModel->delete($activityId);
+        $this->clearPublicHomeCache($section);
         $_SESSION['flash'] = 'Activité supprimée avec succès';
       }
     }
@@ -780,6 +785,7 @@ class AdminController extends Controller
       } else {
         $partnerModel = new \App\Models\PartnerModel();
         $partnerModel->delete($partnerId);
+        $this->clearPublicHomeCache($section);
         $_SESSION['flash'] = 'Partenaire supprimé avec succès';
       }
     }
@@ -812,5 +818,17 @@ class AdminController extends Controller
     }
     fclose($out);
     exit;
+  }
+
+  private function clearPublicHomeCache($section)
+  {
+    if (!in_array($section, ['home', 'about', 'services', 'activities', 'partners'], true)) {
+      return;
+    }
+
+    $cacheFile = __DIR__ . '/../../data/cache/home_public.php';
+    if (is_file($cacheFile)) {
+      unlink($cacheFile);
+    }
   }
 }

@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.theme.default.min.css">
-  <link rel="stylesheet" href="/asset.php?f=css/custom.css">
+  <?php $customCss = realpath(__DIR__ . '/../../../assets/css/custom.css'); ?>
+  <link rel="stylesheet" href="/asset.php?f=css/custom.css&amp;v=<?= $customCss ? filemtime($customCss) : time() ?>">
   <style>
     * {
       font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1052,26 +1053,14 @@
   </nav>
 
   <?php
-  use App\Models\HomeModel;
-  use App\Models\AboutModel;
-  use App\Models\ServiceModel;
-  use App\Models\ActivityModel;
-  use App\Models\PartnerModel;
   use App\Helpers\AssetHelper;
 
   // Session is started in the front controller (public/index.php)
-  
-  $homeModel = new HomeModel();
-  $aboutModel = new AboutModel();
-  $serviceModel = new ServiceModel();
-  $activityModel = new ActivityModel();
-  $partnerModel = new PartnerModel();
-
-  $homeItems = $homeModel->getAll();
-  $aboutItems = $aboutModel->getAll();
-  $services = $serviceModel->getAll();
-  $activities = $activityModel->getAll();
-  $partners = $partnerModel->getAll();
+  $homeItems = $homeItems ?? [];
+  $aboutItems = $aboutItems ?? [];
+  $services = $services ?? [];
+  $activities = $activities ?? [];
+  $partners = $partners ?? [];
 
   ?>
 
@@ -1223,7 +1212,7 @@
                   <div class="carousel-inner">
                     <?php foreach ($images as $idx => $img): ?>
                       <div class="carousel-item <?php echo $idx === 0 ? 'active' : ''; ?>">
-                        <img src="<?php echo htmlspecialchars($img); ?>" class="d-block w-100" alt="À propos">
+                        <img src="<?php echo htmlspecialchars(AssetHelper::url($img)); ?>" class="d-block w-100" alt="À propos" loading="lazy" decoding="async">
                       </div>
                     <?php endforeach; ?>
                   </div>
@@ -1237,7 +1226,7 @@
                   </button>
                 </div>
               <?php else: ?>
-                <img src="<?php echo htmlspecialchars($images[0]); ?>" alt="À propos" class="w-100">
+                <img src="<?php echo htmlspecialchars(AssetHelper::url($images[0])); ?>" alt="À propos" class="w-100" loading="lazy" decoding="async">
               <?php endif; ?>
             <?php else: ?>
               <img
@@ -1258,7 +1247,7 @@
                   <div class="carousel-inner">
                     <?php foreach ($images as $idx => $img): ?>
                       <div class="carousel-item <?php echo $idx === 0 ? 'active' : ''; ?>">
-                        <img src="<?php echo htmlspecialchars($img); ?>" class="d-block w-100"
+                        <img src="<?php echo htmlspecialchars(AssetHelper::url($img)); ?>" class="d-block w-100" loading="lazy" decoding="async"
                           style="height: 100%; object-fit: cover; width: 100%;" alt="À propos">
                       </div>
                     <?php endforeach; ?>
@@ -1273,7 +1262,7 @@
                   </button>
                 </div>
               <?php else: ?>
-                <img src="<?php echo htmlspecialchars($images[0]); ?>" alt="À propos" class="w-100"
+                <img src="<?php echo htmlspecialchars(AssetHelper::url($images[0])); ?>" alt="À propos" class="w-100" loading="lazy" decoding="async"
                   style="height: 500px; object-fit: cover; width: 100%; display: block;">
               <?php endif; ?>
             <?php else: ?>
@@ -1324,7 +1313,7 @@
             <div class="service-card">
               <div class="service-icon">
                 <?php if (!empty($s['icon'])): ?>
-                  <img src="<?php echo AssetHelper::url($s['icon']); ?>"
+                  <img src="<?php echo AssetHelper::url($s['icon']); ?>" loading="lazy" decoding="async"
                     alt="<?php echo htmlspecialchars($s['name'] ?? ''); ?>">
                 <?php else: ?>
                   <i class="bi bi-gear-fill"></i>
@@ -1370,7 +1359,7 @@
             <div class="activity-card">
               <div class="activity-image">
                 <?php if (!empty($a['image'])): ?>
-                  <img src="<?php echo AssetHelper::url($a['image']); ?>"
+                  <img src="<?php echo AssetHelper::url($a['image']); ?>" loading="lazy" decoding="async"
                     alt="<?php echo htmlspecialchars($a['title'] ?? ''); ?>"
                     style="width:100%; height:250px; object-fit:cover;">
                 <?php else: ?>
@@ -1429,7 +1418,7 @@
                   <?php if (!empty($p['logo'])): ?>
                     <?php if (!empty($p['link'])): ?><a href="<?php echo htmlspecialchars($p['link']); ?>"
                         target="_blank"><?php endif; ?>
-                      <img src="<?php echo AssetHelper::url($p['logo']); ?>"
+                      <img src="<?php echo AssetHelper::url($p['logo']); ?>" loading="lazy" decoding="async"
                         alt="<?php echo htmlspecialchars($p['name'] ?? 'Partenaire'); ?>">
                       <?php if (!empty($p['link'])): ?></a><?php endif; ?>
                   <?php else: ?>

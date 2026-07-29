@@ -52,7 +52,20 @@ $types = [
     'js' => 'application/javascript'
 ];
 $ct = $types[$ext] ?? 'application/octet-stream';
+$mtime = filemtime($path) ?: time();
+$etag = '"' . sha1($path . '|' . $mtime . '|' . filesize($path)) . '"';
+
 header('Content-Type: ' . $ct);
-header('Cache-Control: public, max-age=86400');
+header('ETag: ' . $etag);
+header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $mtime) . ' GMT');
+header('Cache-Control: public, max-age=31536000' . (isset($_GET['v']) ? ', immutable' : ''));
+
+$ifNoneMatch = trim($_SERVER['HTTP_IF_NONE_MATCH'] ?? '');
+$ifModifiedSince = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '') ?: 0;
+if ($ifNoneMatch === $etag || $ifModifiedSince >= $mtime) {
+    http_response_code(304);
+    exit;
+}
+
 readfile($path);
 exit;

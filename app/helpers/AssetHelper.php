@@ -28,6 +28,34 @@ class AssetHelper
 
     // Encoder les caractères spéciaux SAUF les slashes (pour préserver la structure du chemin)
     $path = str_replace(' ', '%20', $path);
-    return 'asset.php?f=' . $path;
+    $url = 'asset.php?f=' . $path;
+    $realPath = self::resolveLocalPath($path);
+    if ($realPath) {
+      $url .= '&v=' . filemtime($realPath);
+    }
+    return $url;
+  }
+
+  private static function resolveLocalPath($path)
+  {
+    $path = ltrim(str_replace("..", "", $path), '/\\');
+
+    $assetsBase = realpath(__DIR__ . '/../../assets');
+    if ($assetsBase) {
+      $assetPath = realpath($assetsBase . '/' . $path);
+      if ($assetPath && strpos($assetPath, $assetsBase) === 0 && is_file($assetPath)) {
+        return $assetPath;
+      }
+    }
+
+    $uploadsBase = realpath(__DIR__ . '/../../public/uploads');
+    if ($uploadsBase) {
+      $uploadPath = realpath($uploadsBase . '/' . $path);
+      if ($uploadPath && strpos($uploadPath, $uploadsBase) === 0 && is_file($uploadPath)) {
+        return $uploadPath;
+      }
+    }
+
+    return null;
   }
 }

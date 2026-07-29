@@ -1483,9 +1483,9 @@ class PayrollController extends Controller
             if (!empty($attendances)) {
                 $payslip = $payslipModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
                 
+                // Ne pas re-générer une fiche supprimée. Seules les fiches existantes sont affichées.
                 if (!$payslip) {
-                    // Créer une structure de payslip temporaire à partir des attendances
-                    $payslip = $this->generatePayslipFromAttendances($site, $siteId, $attendances, $weekOf, $weekStart, $weekEnd);
+                    continue;
                 }
                 
                 $sitesWithActivity[$siteId] = [
@@ -1684,8 +1684,9 @@ class PayrollController extends Controller
             if (!empty($attendances)) {
                 $payslip = $payslipModel->getBySiteAndWeekRange($siteId, $weekStart, $weekEnd);
                 
+                // Ne pas re-générer une fiche supprimée pour l'export PDF aussi.
                 if (!$payslip) {
-                    $payslip = $this->generatePayslipFromAttendances($site, $siteId, $attendances, $weekOf, $weekStart, $weekEnd);
+                    continue;
                 }
                 
                 $sitesWithActivity[$siteId] = [

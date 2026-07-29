@@ -37,15 +37,44 @@ class PayslipModel extends Model
             $data['created_at'] = date('Y-m-d H:i:s');
         }
 
-        $result = $this->collection->updateOne(
-            [
-                'site_id' => $siteOid,
-                'week_start' => $data['week_start'],
-                'week_end' => $data['week_end']
-            ],
-            ['$set' => $data],
-            ['upsert' => true]
-        );
+        $filter = ['site_id' => $siteOid];
+
+        if (!empty($data['week_of'])) {
+            $filter['week_of'] = $data['week_of'];
+        } elseif (!empty($data['week_start']) && !empty($data['week_end'])) {
+            $filter['week_start'] = $data['week_start'];
+            $filter['week_end'] = $data['week_end'];
+        } else {
+            $filter['week_start'] = $data['week_start'] ?? null;
+            $filter['week_end'] = $data['week_end'] ?? null;
+        }
+
+        try {
+            $this->collection->updateOne(
+                $filter,
+                ['$set' => $data],
+                ['upsert' => true]
+            );
+        } catch (\MongoDB\Driver\Exception\BulkWriteException $e) {
+            $fallbackFilter = ['site_id' => $siteOid];
+
+            if (!empty($data['week_of'])) {
+                $fallbackFilter['week_of'] = $data['week_of'];
+            } elseif (!empty($data['week_start']) && !empty($data['week_end'])) {
+                $fallbackFilter['week_start'] = $data['week_start'];
+                $fallbackFilter['week_end'] = $data['week_end'];
+            }
+
+            $existing = $this->collection->findOne($fallbackFilter);
+            if ($existing) {
+                $this->collection->updateOne(
+                    ['_id' => $existing['_id']],
+                    ['$set' => $data]
+                );
+            } else {
+                throw $e;
+            }
+        }
 
         return true;
     }

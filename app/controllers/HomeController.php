@@ -3,6 +3,11 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\MessageModel;
+use App\Models\AboutModel;
+use App\Models\ActivityModel;
+use App\Models\HomeModel;
+use App\Models\PartnerModel;
+use App\Models\ServiceModel;
 
 session_status() === PHP_SESSION_ACTIVE ?: null;
 
@@ -73,6 +78,35 @@ class HomeController extends Controller
     }
 
     // Cette page est publique, pas besoin d'authentification
-    $this->render('home/home', []);
+    $this->render('home/home', $this->getPublicHomeData());
+  }
+
+  private function getPublicHomeData()
+  {
+    $cacheFile = __DIR__ . '/../../data/cache/home_public.php';
+    $ttl = 60;
+
+    if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttl) {
+      $cached = @unserialize((string) file_get_contents($cacheFile), ['allowed_classes' => true]);
+      if (is_array($cached)) {
+        return $cached;
+      }
+    }
+
+    $data = [
+      'homeItems' => (new HomeModel())->getAll(),
+      'aboutItems' => (new AboutModel())->getAll(),
+      'services' => (new ServiceModel())->getAll(),
+      'activities' => (new ActivityModel())->getAll(),
+      'partners' => (new PartnerModel())->getAll(),
+    ];
+
+    $cacheDir = dirname($cacheFile);
+    if (!is_dir($cacheDir)) {
+      mkdir($cacheDir, 0755, true);
+    }
+    file_put_contents($cacheFile, serialize($data));
+
+    return $data;
   }
 }
