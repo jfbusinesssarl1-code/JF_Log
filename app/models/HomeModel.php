@@ -3,6 +3,8 @@ namespace App\Models;
 
 use App\Core\Database;
 use App\Helpers\ImageConverterV2;
+use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
 
 class HomeModel
 {
@@ -53,15 +55,15 @@ class HomeModel
     {
         try {
             $oid = new ObjectId($id);
-            
+
             // Récupérer le document avant suppression pour accéder aux images
             $item = $this->collection->findOne(['_id' => $oid]);
-            
+
             // Supprimer l'image associée si elle existe
             if ($item && !empty($item['image'])) {
                 ImageConverterV2::deleteImage($item['image']);
             }
-            
+
             // Supprimer le document
             $this->collection->deleteOne(['_id' => $oid]);
             return true;

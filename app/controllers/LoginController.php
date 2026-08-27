@@ -26,18 +26,23 @@ class LoginController extends Controller
                 } elseif (strlen($password) < 6) {
                     $error = "Mot de passe trop court";
                 } else {
-                    $model = new UserModel();
-                    $user = $model->verify($username, $password);
-                    if ($user) {
-                        $_SESSION['user'] = [
-                            '_id' => (string) $user['_id'],
-                            'username' => $user['username'],
-                            'role' => $user['role'] ?? 'user'
-                        ];
-                        header('Location: ?page=dashboard');
-                        exit;
-                    } else {
-                        $error = 'Identifiants invalides';
+                    try {
+                        $model = new UserModel();
+                        $user = $model->verify($username, $password);
+                        if ($user) {
+                            $_SESSION['user'] = [
+                                '_id' => (string) $user['_id'],
+                                'username' => $user['username'],
+                                'role' => $user['role'] ?? 'user'
+                            ];
+                            header('Location: ?page=dashboard');
+                            exit;
+                        } else {
+                            $error = 'Identifiants invalides';
+                        }
+                    } catch (\Throwable $e) {
+                        error_log('LoginController::index - ' . $e->getMessage());
+                        $error = "Connexion a la base de donnees impossible. Verifiez la configuration MongoDB et que le serveur est demarre.";
                     }
                 }
             }

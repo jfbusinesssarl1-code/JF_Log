@@ -197,7 +197,18 @@ if (session_status() === PHP_SESSION_NONE) {
       </div>
     </div>
 
+    <?php $canManageStock = isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin', 'stock_manager']); ?>
+
     <!-- Tableau -->
+    <?php if ($canManageStock): ?>
+      <form method="post" action="?page=stock&action=delete" id="bulkDeleteStockForm" class="mb-0">
+        <input type="hidden" name="csrf_token" value="<?= \App\Core\Csrf::generateToken() ?>">
+        <div class="d-flex justify-content-end mb-2 no-print">
+          <button type="submit" class="btn btn-sm btn-danger" id="bulkDeleteStockBtn" disabled>
+            <i class="bi bi-trash me-1"></i> Supprimer selection
+          </button>
+        </div>
+    <?php endif; ?>
     <div class="table-responsive">
       <table class="table table-sm table-bordered table-striped table-hover stock-table">
         <thead>
@@ -212,7 +223,12 @@ if (session_status() === PHP_SESSION_NONE) {
             <th class="text-end">Entrée Total</th>
             <th class="text-end">Sortie Qte</th>
             <th class="text-end">Stock Qte</th>
-            <th class="text-center">Actions</th>
+            <th class="text-center">
+              <?php if ($canManageStock): ?>
+                <input type="checkbox" class="form-check-input me-1" id="selectAllStockRows" title="Tout selectionner">
+              <?php endif; ?>
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -254,11 +270,9 @@ if (session_status() === PHP_SESSION_NONE) {
                 <td class="text-end"><?= $stockQ ?></td>
                 <td class="text-center">
                   <div class="d-flex justify-content-center gap-2">
-                    <?php if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['accountant', 'admin', 'stock_manager'])): ?>
+                    <?php if ($canManageStock): ?>
                       <a href="?page=stock&action=edit&id=<?= urlencode($id) ?>" class="btn btn-sm btn-warning">Modifier</a>
-                      <?php $csrfToken = \App\Core\Csrf::getToken(); ?>
-                      <a href="?page=stock&action=delete&id=<?= urlencode($id) ?>&token=<?= urlencode($csrfToken) ?>" class="btn btn-sm btn-danger"
-                        onclick="return confirm('Confirmer la suppression ?')">Supprimer</a>
+                      <input type="checkbox" class="form-check-input stock-delete-check" name="ids[]" value="<?= htmlspecialchars($id) ?>" aria-label="Selectionner pour suppression">
                     <?php else: ?>
                       —
                     <?php endif; ?>
@@ -274,6 +288,9 @@ if (session_status() === PHP_SESSION_NONE) {
         </tbody>
       </table>
     </div>
+    <?php if ($canManageStock): ?>
+      </form>
+    <?php endif; ?>
 
     <!-- Pagination Section -->
     <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
@@ -590,6 +607,51 @@ if (session_status() === PHP_SESSION_NONE) {
             var cfHidden = document.getElementById('compte_filtre');
             if (cfHidden) cfHidden.value = '';
           });
+        }
+
+        var bulkDeleteForm = document.getElementById('bulkDeleteStockForm');
+        var bulkDeleteBtn = document.getElementById('bulkDeleteStockBtn');
+        var selectAllStockRows = document.getElementById('selectAllStockRows');
+        var stockDeleteChecks = Array.from(document.querySelectorAll('.stock-delete-check'));
+
+        function updateBulkDeleteState() {
+          var checkedCount = stockDeleteChecks.filter(function (check) {
+            return check.checked;
+          }).length;
+
+          if (bulkDeleteBtn) {
+            bulkDeleteBtn.disabled = checkedCount === 0;
+          }
+          if (selectAllStockRows) {
+            selectAllStockRows.checked = checkedCount > 0 && checkedCount === stockDeleteChecks.length;
+            selectAllStockRows.indeterminate = checkedCount > 0 && checkedCount < stockDeleteChecks.length;
+          }
+        }
+
+        if (selectAllStockRows) {
+          selectAllStockRows.addEventListener('change', function () {
+            stockDeleteChecks.forEach(function (check) {
+              check.checked = selectAllStockRows.checked;
+            });
+            updateBulkDeleteState();
+          });
+        }
+
+        stockDeleteChecks.forEach(function (check) {
+          check.addEventListener('change', updateBulkDeleteState);
+        });
+
+        if (bulkDeleteForm) {
+          bulkDeleteForm.addEventListener('submit', function (e) {
+            var checkedCount = stockDeleteChecks.filter(function (check) {
+              return check.checked;
+            }).length;
+
+            if (checkedCount === 0 || !confirm('Confirmer la suppression des elements coches ?')) {
+              e.preventDefault();
+            }
+          });
+          updateBulkDeleteState();
         }
 
         // Reset modal form on close

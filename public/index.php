@@ -17,18 +17,19 @@ if (session_status() === PHP_SESSION_NONE) {
 $page = $_GET['page'] ?? 'home';
 $action = $_GET['action'] ?? '';
 
-// Routes API
-if ($page === 'api') {
-    $apiAction = $_GET['action'] ?? '';
-    $apiController = new App\Controllers\ApiController();
+try {
+    // Routes API
+    if ($page === 'api') {
+        $apiAction = $_GET['action'] ?? '';
+        $apiController = new App\Controllers\ApiController();
 
-    if ($apiAction === 'comptes') {
-        $apiController->getComptes();
+        if ($apiAction === 'comptes') {
+            $apiController->getComptes();
+        }
+        exit;
     }
-    exit;
-}
 
-switch ($page) {
+    switch ($page) {
     case 'stock':
         $controller = new App\Controllers\StockController();
         if ($action === 'add') {
@@ -191,4 +192,19 @@ switch ($page) {
     default:
         echo 'Page not found';
         break;
+}
+} catch (\Throwable $e) {
+    error_log('Public index exception: ' . $e->getMessage());
+    http_response_code(500);
+    echo '<div style="padding:30px;font-family:Arial,sans-serif;">';
+    echo '<h1>Erreur interne du serveur</h1>';
+
+    $debugEnabled = filter_var($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN);
+    if ($debugEnabled || (($_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: '') === 'development')) {
+        echo '<pre style="white-space:pre-wrap;background:#f8f9fa;padding:16px;border-radius:8px;">' . htmlspecialchars($e->getMessage()) . "\n\n" . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+    } else {
+        echo '<p>Impossible de se connecter à la base de données. Veuillez réessayer dans quelques instants.</p>';
+    }
+
+    echo '</div>';
 }

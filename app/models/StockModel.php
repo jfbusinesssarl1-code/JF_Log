@@ -8,9 +8,12 @@ use App\Helpers\PaginationHelper;
 class StockModel extends Model
 {
     private $collection;
+    private const DISPLAY_SORT = ['date' => 1, 'created_at' => 1, '_id' => 1];
+    private const CHRONOLOGICAL_SORT = ['date' => 1, 'created_at' => 1, '_id' => 1];
+    private const LATEST_SORT = ['date' => -1, 'created_at' => -1, '_id' => -1];
 
     public function __construct()
-    {
+     {
         parent::__construct();
         // utiliser la collection 'stocks' (adapte si nécessaire)
         $this->collection = $this->db->stocks;
@@ -18,6 +21,7 @@ class StockModel extends Model
             $this->collection->createIndex(['compte' => 1, 'date' => 1]);
             $this->collection->createIndex(['lieu' => 1]);
             $this->collection->createIndex(['created_at' => -1]);
+            $this->collection->createIndex(['created_at' => 1, '_id' => 1]);
         } catch (\Throwable $e) {}
     }
 
@@ -57,7 +61,7 @@ class StockModel extends Model
 
     public function getAll()
     {
-        return $this->collection->find([], ['sort' => ['date' => 1]])->toArray();
+        return $this->collection->find([], ['sort' => self::DISPLAY_SORT])->toArray();
     }
 
     public function deleteEntry($id)
@@ -143,7 +147,7 @@ class StockModel extends Model
             $query['lieu'] = ['$regex' => $filters['lieu'], '$options' => 'i'];
         }
 
-        return $this->collection->find($query, ['sort' => ['date' => 1]])->toArray();
+        return $this->collection->find($query, ['sort' => self::DISPLAY_SORT])->toArray();
     }
 
     public function getFilteredWithPagination($filters = [], $page = 1, $itemsPerPage = 20)
@@ -185,7 +189,7 @@ class StockModel extends Model
 
         // Récupérer les éléments pour la page actuelle
         $options = [
-            'sort' => ['date' => 1],
+            'sort' => self::DISPLAY_SORT,
             'skip' => $pagination->getOffset(),
             'limit' => $pagination->getLimit()
         ];
@@ -199,7 +203,7 @@ class StockModel extends Model
 
     public function getLastByCompte($compte)
     {
-        $cursor = $this->collection->find(['compte' => $compte], ['sort' => ['date' => -1], 'limit' => 1])->toArray();
+        $cursor = $this->collection->find(['compte' => $compte], ['sort' => self::LATEST_SORT, 'limit' => 1])->toArray();
         return (!empty($cursor) ? $cursor[0] : null);
     }
 
@@ -244,7 +248,7 @@ class StockModel extends Model
     // Recalcule le stock d'un compte en appliquant FIFO et moyenne des PU
     public function recomputeCompte(string $compte): void
     {
-        $cursor = $this->collection->find(['compte' => $compte], ['sort' => ['date' => 1, '_id' => 1]]);
+        $cursor = $this->collection->find(['compte' => $compte], ['sort' => self::CHRONOLOGICAL_SORT]);
         $lots = []; // chaque lot: ['qte' => float, 'pu' => float]
         $stockQty = 0.0;
         $stockAvgPu = 0.0;

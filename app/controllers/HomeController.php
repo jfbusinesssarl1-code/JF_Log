@@ -93,19 +93,39 @@ class HomeController extends Controller
       }
     }
 
-    $data = [
-      'homeItems' => (new HomeModel())->getAll(),
-      'aboutItems' => (new AboutModel())->getAll(),
-      'services' => (new ServiceModel())->getAll(),
-      'activities' => (new ActivityModel())->getAll(),
-      'partners' => (new PartnerModel())->getAll(),
-    ];
-
-    $cacheDir = dirname($cacheFile);
-    if (!is_dir($cacheDir)) {
-      mkdir($cacheDir, 0755, true);
+    $data = [];
+    $cacheable = false;
+    try {
+      $data = [
+        'homeItems' => (new HomeModel())->getAll(),
+        'aboutItems' => (new AboutModel())->getAll(),
+        'services' => (new ServiceModel())->getAll(),
+        'activities' => (new ActivityModel())->getAll(),
+        'partners' => (new PartnerModel())->getAll(),
+      ];
+      $cacheable = true;
+    } catch (\Throwable $e) {
+      error_log('HomeController::getPublicHomeData - ' . $e->getMessage());
+      if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+      }
+      $_SESSION['flash_error'] = 'Impossible de charger les données du site pour le moment. Veuillez réessayer dans quelques instants.';
+      $data = [
+        'homeItems' => [],
+        'aboutItems' => [],
+        'services' => [],
+        'activities' => [],
+        'partners' => [],
+      ];
     }
-    file_put_contents($cacheFile, serialize($data));
+
+    if ($cacheable) {
+      $cacheDir = dirname($cacheFile);
+      if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+      }
+      file_put_contents($cacheFile, serialize($data));
+    }
 
     return $data;
   }

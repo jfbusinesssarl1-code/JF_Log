@@ -10,15 +10,25 @@ class StockController extends Controller
     public function delete()
     {
         $this->requireRole(['accountant', 'admin', 'stock_manager']);
-        // accepter GET id (lien) ou POST id (form)
-        $id = $_GET['id'] ?? ($_POST['id'] ?? '');
+        // accepter GET id (ancien lien), POST id ou POST ids[] (suppression multiple)
+        $ids = [];
+        if (!empty($_POST['ids']) && is_array($_POST['ids'])) {
+            $ids = $_POST['ids'];
+        } else {
+            $id = $_GET['id'] ?? ($_POST['id'] ?? '');
+            if ($id !== '') {
+                $ids[] = $id;
+            }
+        }
         $token = $_GET['token'] ?? ($_POST['csrf_token'] ?? '');
         if (!\App\Core\Csrf::checkToken($token)) {
             if (session_status() === PHP_SESSION_NONE) session_start();
             $_SESSION['flash_error'] = 'Erreur CSRF - opération annulée';
-        } elseif ($id) {
+        } elseif (!empty($ids)) {
             $model = new StockModel();
-            $model->deleteEntry($id);
+            foreach (array_unique($ids) as $id) {
+                $model->deleteEntry($id);
+            }
         }
         header('Location: ?page=stock');
         exit;
