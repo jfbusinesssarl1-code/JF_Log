@@ -9,6 +9,10 @@ class DashboardController extends Controller
     {
         $this->requireAuth();
         $userRole = $_SESSION['user']['role'] ?? 'user';
+        if ($userRole === 'caissier') {
+            header('Location: ?page=caisse');
+            exit;
+        }
         $username = $_SESSION['user']['username'] ?? 'Utilisateur';
 
         $balanceModel = new BalanceModel();
@@ -60,6 +64,10 @@ class DashboardController extends Controller
     public function export()
     {
         $this->requireAuth();
+        if (($_SESSION['user']['role'] ?? 'user') === 'caissier') {
+            header('Location: ?page=caisse');
+            exit;
+        }
         $format = $_GET['format'] ?? 'pdf';
         if ($format !== 'pdf')
             $format = 'pdf';

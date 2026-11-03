@@ -30,12 +30,14 @@ class LoginController extends Controller
                         $model = new UserModel();
                         $user = $model->verify($username, $password);
                         if ($user) {
+                            $role = $user['role'] ?? 'user';
                             $_SESSION['user'] = [
                                 '_id' => (string) $user['_id'],
                                 'username' => $user['username'],
-                                'role' => $user['role'] ?? 'user'
+                                'role' => $role
                             ];
-                            header('Location: ?page=dashboard');
+                            $destination = $role === 'caissier' ? 'caisse' : 'dashboard';
+                            header('Location: ?page=' . $destination);
                             exit;
                         } else {
                             $error = 'Identifiants invalides';

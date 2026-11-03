@@ -6,14 +6,79 @@ if (session_status() === PHP_SESSION_NONE)
 <html lang="fr">
 
 <head>
-  <?php $title = 'Livre de caisse';
+  <?php $title = 'Tableau de bord - Caisse';
   require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
 <body class="position-relative">
   <?php include __DIR__ . '/navbar.php'; ?>
   <div class="container mt-4">
-    <h2 class="mb-0 fw-bold fs-2">Livre de caisse</h2>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+      <div>
+        <h2 class="mb-1 fw-bold fs-2">Tableau de bord de la caisse</h2>
+        <p class="text-muted mb-0">Suivi des mouvements et accès à la gestion de la caisse — <?= htmlspecialchars($dashboardDate ?? date('Y-m-d')) ?></p>
+      </div>
+    </div>
+
+    <?php
+      $formatAmount = static function ($amount) {
+        return number_format((float) $amount, 2, ',', ' ');
+      };
+    ?>
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-sm-6 col-xl">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-wallet2 me-1"></i>Solde actuel</div>
+            <div class="fs-4 fw-bold"><?= $formatAmount($summary['balance'] ?? 0) ?></div>
+            <div class="small text-muted">Solde cumulé de la caisse</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6 col-xl">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-arrow-down-circle me-1 text-success"></i>Recettes du jour</div>
+            <div class="fs-4 fw-bold text-success"><?= $formatAmount($summary['todayIncome'] ?? 0) ?></div>
+            <div class="small text-muted">Entrées enregistrées aujourd'hui</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6 col-xl">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-arrow-up-circle me-1 text-danger"></i>Dépenses du jour</div>
+            <div class="fs-4 fw-bold text-danger"><?= $formatAmount($summary['todayExpense'] ?? 0) ?></div>
+            <div class="small text-muted">Sorties enregistrées aujourd'hui</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6 col-xl">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-calendar3 me-1"></i>Recettes du mois</div>
+            <div class="fs-4 fw-bold"><?= $formatAmount($summary['monthIncome'] ?? 0) ?></div>
+            <div class="small text-muted">Depuis le début du mois</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6 col-xl">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-receipt me-1"></i>Opérations du mois</div>
+            <div class="fs-4 fw-bold"><?= (int) ($summary['monthOperations'] ?? 0) ?></div>
+            <div class="small text-muted">Dépenses du mois : <?= $formatAmount($summary['monthExpense'] ?? 0) ?></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <h3 class="h5 fw-bold mb-0">Historique et gestion des opérations</h3>
+      <a class="btn btn-outline-primary btn-sm" href="?page=caisse&action=export_today">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Exporter les opérations du jour
+      </a>
+    </div>
     
     <!-- Export PDF Button - Desktop and Mobile -->
     <div class="no-print">

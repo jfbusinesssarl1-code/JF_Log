@@ -66,7 +66,9 @@ try {
         break;
     case 'caisse':
         $controller = new App\Controllers\CaisseController();
-        if ($action === 'add') {
+        if ($action === 'list_partial') {
+            $controller->list_partial();
+        } elseif ($action === 'add') {
             $controller->add();
         } elseif ($action === 'edit') {
             $controller->edit();
@@ -74,6 +76,8 @@ try {
             $controller->delete();
         } elseif ($action === 'export') {
             $controller->export();
+        } elseif ($action === 'export_today') {
+            $controller->exportToday();
         } else {
             $controller->index();
         }

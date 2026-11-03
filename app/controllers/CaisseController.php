@@ -50,11 +50,15 @@ class CaisseController extends Controller
     $result = $model->getAllWithPagination($filters, $page, $itemsPerPage);
     $items = $result['items'];
     $pagination = $result['pagination'];
+    $today = date('Y-m-d');
+    $summary = $model->getDashboardSummary($today, date('Y-m-01'));
 
     $this->render('caisse', [
       'items' => $items,
       'filters' => $filters,
-      'pagination' => $pagination
+      'pagination' => $pagination,
+      'summary' => $summary,
+      'dashboardDate' => $today
     ]);
   }
 
@@ -332,7 +336,13 @@ class CaisseController extends Controller
     $html = $header;
     $html .= '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5" cellspacing="0"><thead><tr><th>Date</th><th>Type</th><th>Libellé</th><th>Recette</th><th>Dépense</th><th>Solde</th></tr></thead><tbody>';
 
+    $totalRecettes = 0.0;
+    $totalDepenses = 0.0;
+    $soldeFinal = 0.0;
     foreach ($items as $it) {
+      $totalRecettes += (float) ($it['recette'] ?? 0);
+      $totalDepenses += (float) ($it['depense'] ?? 0);
+      $soldeFinal = (float) ($it['solde'] ?? 0);
       $html .= '<tr>';
       $html .= '<td>' . htmlspecialchars($it['date'] ?? '') . '</td>';
       $html .= '<td>' . htmlspecialchars($it['type'] ?? '') . '</td>';
@@ -342,6 +352,12 @@ class CaisseController extends Controller
       $html .= '<td style="text-align:right">' . number_format($it['solde'] ?? 0, 2, '.', '') . '</td>';
       $html .= '</tr>';
     }
+    $html .= '<tr style="font-weight:bold;background:#f1f3f5;">';
+    $html .= '<td colspan="3">Totaux</td>';
+    $html .= '<td style="text-align:right">' . number_format($totalRecettes, 2, '.', '') . '</td>';
+    $html .= '<td style="text-align:right">' . number_format($totalDepenses, 2, '.', '') . '</td>';
+    $html .= '<td style="text-align:right">' . number_format($soldeFinal, 2, '.', '') . '</td>';
+    $html .= '</tr>';
     $html .= '</tbody></table>';
 
 
@@ -374,6 +390,74 @@ class CaisseController extends Controller
     header('Content-Type: text/html; charset=utf-8');
     header('Content-Disposition: attachment; filename="caisse.html"');
     echo '<html><head><meta charset="utf-8"></head><body>' . $notice . $html . '</body></html>';
+    exit;
+  }
+
+  public function exportToday()
+  {
+    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
+    $today = date('Y-m-d');
+    $model = new CaisseModel();
+    $items = $model->getAll(['date_debut' => $today, 'date_fin' => $today]);
+    $summary = $model->getDashboardSummary($today, date('Y-m-01'));
+
+    $header = \App\Helpers\PdfHelper::renderHeader('Opérations de caisse du ' . $today);
+    $footer = \App\Helpers\PdfHelper::renderFooter();
+    $html = '<div style="font-family: sans-serif;">' . $header;
+    $html .= '<table style="width:100%;margin:16px 0;border-collapse:collapse;" cellpadding="8"><tbody>';
+    $html .= '<tr><th style="text-align:left;background:#f1f3f5;">Total des recettes du jour</th><td style="text-align:right;">' . number_format($summary['todayIncome'], 2, '.', ' ') . '</td></tr>';
+    $html .= '<tr><th style="text-align:left;background:#f1f3f5;">Total des dépenses du jour</th><td style="text-align:right;">' . number_format($summary['todayExpense'], 2, '.', ' ') . '</td></tr>';
+    $html .= '<tr><th style="text-align:left;background:#e7f1ff;">Solde actuel de la caisse</th><td style="text-align:right;font-weight:bold;">' . number_format($summary['balance'], 2, '.', ' ') . '</td></tr>';
+    $html .= '</tbody></table>';
+    $html .= '<table style="width:100%;border-collapse:collapse;" border="1" cellpadding="5" cellspacing="0">';
+    $html .= '<thead><tr><th>Date</th><th>N° Bon</th><th>Opérateur</th><th>Libellé</th><th>Recettes</th><th>Dépenses</th><th>Solde</th></tr></thead><tbody>';
+
+    if (empty($items)) {
+      $html .= '<tr><td colspan="7" style="text-align:center;">Aucune opération enregistrée pour cette journée.</td></tr>';
+    } else {
+      foreach ($items as $item) {
+        $html .= '<tr>';
+        $html .= '<td>' . htmlspecialchars($item['date'] ?? '') . '</td>';
+        $html .= '<td>' . htmlspecialchars($item['numero_bon_manuscrit'] ?? '') . '</td>';
+        $html .= '<td>' . htmlspecialchars($item['operateur'] ?? '') . '</td>';
+        $html .= '<td>' . htmlspecialchars($item['libelle'] ?? '') . '</td>';
+        $html .= '<td style="text-align:right;">' . number_format($item['recette'] ?? 0, 2, '.', ' ') . '</td>';
+        $html .= '<td style="text-align:right;">' . number_format($item['depense'] ?? 0, 2, '.', ' ') . '</td>';
+        $html .= '<td style="text-align:right;">' . number_format($item['solde'] ?? 0, 2, '.', ' ') . '</td>';
+        $html .= '</tr>';
+      }
+    }
+
+    $html .= '<tr style="font-weight:bold;background:#f1f3f5;"><td colspan="4">Totaux du jour</td>';
+    $html .= '<td style="text-align:right;">' . number_format($summary['todayIncome'], 2, '.', ' ') . '</td>';
+    $html .= '<td style="text-align:right;">' . number_format($summary['todayExpense'], 2, '.', ' ') . '</td>';
+    $html .= '<td style="text-align:right;">' . number_format($summary['balance'], 2, '.', ' ') . '</td></tr>';
+    $html .= '</tbody></table></div>';
+
+    if (class_exists('\\Mpdf\\Mpdf')) {
+      try {
+        $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4', 'orientation' => 'P']);
+        $mpdf->SetHTMLFooter($footer);
+        $mpdf->WriteHTML($html);
+        $mpdf->Output('caisse-' . $today . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+        exit;
+      } catch (\Throwable $e) {
+        error_log('CaisseController::exportToday PDF generation failed: ' . $e->getMessage());
+      }
+    }
+
+    $notice = '<div style="background:#fff3cd;padding:10px;border:1px solid #ffeeba;margin-bottom:10px;">' .
+      '<strong>Remarque :</strong> Le générateur PDF côté serveur (<code>mpdf/mpdf</code>) est indisponible. Imprimez cette page en PDF depuis votre navigateur.' .
+      '</div>';
+    header('Content-Type: text/html; charset=utf-8');
+    header('Content-Disposition: attachment; filename="caisse-' . $today . '.html"');
+    echo '<html><head><meta charset="utf-8"><style>'
+      . 'html,body{min-height:100%;}body{min-height:100vh;display:flex;flex-direction:column;margin:16px;}'
+      . '.caisse-export-content{flex:1 0 auto;}.caisse-export-footer{margin-top:auto;flex:0 0 auto;}'
+      . '@media print{body{min-height:100vh;}}'
+      . '</style></head><body>' . $notice
+      . '<main class="caisse-export-content">' . $html . '</main>'
+      . '<footer class="caisse-export-footer">' . $footer . '</footer></body></html>';
     exit;
   }
 }

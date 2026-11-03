@@ -34,6 +34,11 @@ Le système utilise un contrôle d'accès basé sur les rôles (RBAC) pour sécu
 - ✅ Dashboard (accès limité)
 - ❌ Tous les autres services
 
+### 6. **caissier** (Caissier)
+- ✅ Tableau de bord de la caisse : solde, recettes, dépenses et historique
+- ✅ Saisie et gestion des opérations de caisse
+- ❌ Dashboard comptable et autres services
+
 ## Implémentation technique
 
 ### Middleware de contrôle d'accès
@@ -67,7 +72,9 @@ public function index() {
 | Grand Livre | accountant, manager, admin |
 | Stock | manager, admin, stock_manager |
 | Relevé | accountant, manager, admin |
-| Dashboard | Tous (filtré par rôle) |
+| Dashboard comptable | Tous (filtré par rôle), sauf caissier |
+| Tableau de bord caisse et lecture | caissier, accountant, manager, admin |
+| Saisie, modification et suppression des opérations de caisse | caissier, admin |
 | Gestion Utilisateurs | admin, manager |
 
 ## Base de données

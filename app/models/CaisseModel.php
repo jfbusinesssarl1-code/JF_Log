@@ -223,4 +223,91 @@ class CaisseModel extends Model
   {
     return $this->collection->countDocuments($query);
   }
+
+  public function getDashboardSummary($today, $monthStart)
+  {
+    $amount = ['$ifNull' => ['$montant', 0]];
+    $isToday = ['$eq' => ['$date', $today]];
+    $isCurrentMonth = [
+      '$and' => [
+        ['$gte' => ['$date', $monthStart]],
+        ['$lte' => ['$date', $today]]
+      ]
+    ];
+    $isIncome = ['$eq' => ['$type', 'entree']];
+
+    $result = $this->collection->aggregate([
+      [
+        '$group' => [
+          '_id' => null,
+          'balance' => [
+            '$sum' => [
+              '$cond' => [
+                $isIncome,
+                $amount,
+                ['$multiply' => [$amount, -1]]
+              ]
+            ]
+          ],
+          'todayIncome' => [
+            '$sum' => [
+              '$cond' => [
+                ['$and' => [$isToday, $isIncome]],
+                $amount,
+                0
+              ]
+            ]
+          ],
+          'todayExpense' => [
+            '$sum' => [
+              '$cond' => [
+                ['$and' => [$isToday, ['$eq' => ['$type', 'sortie']]]],
+                $amount,
+                0
+              ]
+            ]
+          ],
+          'monthIncome' => [
+            '$sum' => [
+              '$cond' => [
+                ['$and' => [$isCurrentMonth, $isIncome]],
+                $amount,
+                0
+              ]
+            ]
+          ],
+          'monthExpense' => [
+            '$sum' => [
+              '$cond' => [
+                ['$and' => [$isCurrentMonth, ['$eq' => ['$type', 'sortie']]]],
+                $amount,
+                0
+              ]
+            ]
+          ],
+          'monthOperations' => [
+            '$sum' => ['$cond' => [$isCurrentMonth, 1, 0]]
+          ]
+        ]
+      ]
+    ])->toArray();
+
+    $summary = [
+      'balance' => 0.0,
+      'todayIncome' => 0.0,
+      'todayExpense' => 0.0,
+      'monthIncome' => 0.0,
+      'monthExpense' => 0.0,
+      'monthOperations' => 0
+    ];
+    if (!empty($result)) {
+      foreach ($summary as $key => $default) {
+        $summary[$key] = $key === 'monthOperations'
+          ? (int) ($result[0][$key] ?? $default)
+          : (float) ($result[0][$key] ?? $default);
+      }
+    }
+
+    return $summary;
+  }
 }

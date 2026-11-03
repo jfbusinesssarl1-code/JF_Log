@@ -6,11 +6,13 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Récupérer la page active depuis l'URL
 $currentPage = $_GET['page'] ?? 'dashboard';
+$__role = $_SESSION['user']['role'] ?? 'guest';
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top shadow-sm">
   <div class="container-fluid navbar-container">
     <!-- Logo à gauche -->
-    <a class="navbar-brand navbar-brand-custom order-lg-1 d-flex flex-column align-items-center" href="?page=dashboard">
+    <a class="navbar-brand navbar-brand-custom order-lg-1 d-flex flex-column align-items-center"
+      href="<?= $__role === 'caissier' ? '?page=caisse' : '?page=dashboard' ?>">
       <img id="logoPreviewImg" src="/asset.php?f=images/logo.png" alt="Logo preview">
       <div class="d-none d-md-flex ms-2 align-items-center justify-content-center">
         <div class="h4 mb-0 fw-bold" style="margin-right: 10px;">CB.JF</div>
@@ -26,11 +28,10 @@ $currentPage = $_GET['page'] ?? 'dashboard';
 
     <!-- Menu centré -->
     <div class="collapse navbar-collapse order-lg-2" id="navbarNav">
-      <?php $__role = $_SESSION['user']['role'] ?? 'guest'; ?>
       <ul class="navbar-nav mx-auto">
         <?php if ($__role === 'caissier'): ?>
           <li class="nav-item"><a class="nav-link <?= ($currentPage === 'caisse') ? 'active' : '' ?>"
-              href="?page=caisse">Caisse</a></li>
+              href="?page=caisse">Tableau de bord caisse</a></li>
         <?php elseif ($__role === 'stock_manager'): ?>
           <!-- Menu limité pour Stock Manager: Dashboard et Stock uniquement -->
           <li class="nav-item"><a class="nav-link <?= ($currentPage === 'dashboard') ? 'active' : '' ?>"
