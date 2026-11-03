@@ -284,11 +284,17 @@ class StockController extends Controller
         $stocks = $result['items'];
         $pagination = $result['pagination'];
         $comptesMap = $model->getComptesMap();
+        $today = date('Y-m-d');
+        $summary = $model->getDashboardSummary(date('Y-m-01'), $today);
+        $dashboardStockDetails = $model->getDashboardStockDetails();
 
         $this->render('stock', [
             'stocks' => $stocks,
             'comptesMap' => $comptesMap,
-            'pagination' => $pagination
+            'pagination' => $pagination,
+            'summary' => $summary,
+            'dashboardStockDetails' => $dashboardStockDetails,
+            'dashboardDate' => $today
         ]);
     }
 

@@ -207,6 +207,99 @@ class StockModel extends Model
         return (!empty($cursor) ? $cursor[0] : null);
     }
 
+    public function getDashboardSummary(string $monthStart, string $today): array
+    {
+        $currentStock = $this->collection->aggregate([
+            [
+                '$match' => [
+                    'compte' => ['$exists' => true, '$nin' => ['', null]]
+                ]
+            ],
+            ['$sort' => self::LATEST_SORT],
+            [
+                '$group' => [
+                    '_id' => '$compte',
+                    'quantity' => ['$first' => ['$ifNull' => ['$stock.qte', 0]]]
+                ]
+            ],
+            [
+                '$group' => [
+                    '_id' => null,
+                    'references' => ['$sum' => 1],
+                    'availableReferences' => [
+                        '$sum' => ['$cond' => [['$gt' => ['$quantity', 0]], 1, 0]]
+                    ],
+                    'outOfStockReferences' => [
+                        '$sum' => ['$cond' => [['$lte' => ['$quantity', 0]], 1, 0]]
+                    ]
+                ]
+            ]
+        ])->toArray();
+
+        $monthlyActivity = $this->collection->aggregate([
+            [
+                '$match' => [
+                    'date' => ['$gte' => $monthStart, '$lte' => $today]
+                ]
+            ],
+            [
+                '$group' => [
+                    '_id' => null,
+                    'operations' => ['$sum' => 1],
+                    'incomingQuantity' => ['$sum' => ['$ifNull' => ['$entree.qte', 0]]],
+                    'outgoingQuantity' => ['$sum' => ['$ifNull' => ['$sortie.qte', 0]]]
+                ]
+            ]
+        ])->toArray();
+
+        $current = $currentStock[0] ?? [];
+        $activity = $monthlyActivity[0] ?? [];
+
+        return [
+            'references' => (int) ($current['references'] ?? 0),
+            'availableReferences' => (int) ($current['availableReferences'] ?? 0),
+            'outOfStockReferences' => (int) ($current['outOfStockReferences'] ?? 0),
+            'monthOperations' => (int) ($activity['operations'] ?? 0),
+            'monthIncomingQuantity' => (float) ($activity['incomingQuantity'] ?? 0),
+            'monthOutgoingQuantity' => (float) ($activity['outgoingQuantity'] ?? 0)
+        ];
+    }
+
+    public function getDashboardStockDetails(): array
+    {
+        $items = $this->collection->aggregate([
+            [
+                '$match' => [
+                    'compte' => ['$exists' => true, '$nin' => ['', null]]
+                ]
+            ],
+            ['$sort' => self::LATEST_SORT],
+            [
+                '$group' => [
+                    '_id' => '$compte',
+                    'compte' => ['$first' => '$compte'],
+                    'intitule' => ['$first' => ['$ifNull' => ['$intitule', '']]],
+                    'designation' => ['$first' => ['$ifNull' => ['$designation', '']]],
+                    'lieu' => ['$first' => ['$ifNull' => ['$lieu', '']]],
+                    'date' => ['$first' => ['$ifNull' => ['$date', '']]],
+                    'quantity' => ['$first' => ['$ifNull' => ['$stock.qte', 0]]]
+                ]
+            ],
+            ['$sort' => ['intitule' => 1, 'compte' => 1]]
+        ])->toArray();
+
+        return array_map(static function ($item) {
+            return [
+                'compte' => (string) ($item['compte'] ?? ''),
+                'intitule' => (string) ($item['intitule'] ?? ''),
+                'designation' => (string) ($item['designation'] ?? ''),
+                'lieu' => (string) ($item['lieu'] ?? ''),
+                'date' => (string) ($item['date'] ?? ''),
+                'quantity' => (float) ($item['quantity'] ?? 0)
+            ];
+        }, $items);
+    }
+
     public function getComptesMap()
     {
         $cursor = $this->collection->find([], ['projection' => ['compte' => 1, 'intitule' => 1]]);

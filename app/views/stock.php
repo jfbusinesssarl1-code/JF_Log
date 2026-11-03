@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 <html lang="fr">
 
 <head>
-  <?php $title = 'Fiche de Stock';
+  <?php $title = 'Tableau de bord - Stock';
   require __DIR__ . '/_layout_head.php'; ?>
 </head>
 
@@ -53,8 +53,118 @@ if (session_status() === PHP_SESSION_NONE) {
       #compte_suggestions .list-group-item {
         cursor: pointer;
       }
+
+      .stock-summary-trigger {
+        cursor: pointer;
+        transition: box-shadow .15s ease, transform .15s ease;
+      }
+
+      .stock-summary-trigger:hover,
+      .stock-summary-trigger:focus-visible {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .12) !important;
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+      }
+
+      .stock-state-panel[hidden] {
+        display: none !important;
+      }
     </style>
-    <h4 class="fw-bold" style="color: blue;">Fiche de stock</h4>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h2 class="fw-bold mb-1">Tableau de bord du stock</h2>
+        <p class="text-muted mb-0">Vue d’ensemble au <?= htmlspecialchars($dashboardDate ?? date('Y-m-d')) ?>. Les filtres ci-dessous concernent l’historique des mouvements.</p>
+      </div>
+    </div>
+
+    <?php
+      $formatStockNumber = static function ($amount) {
+        return number_format((float) $amount, 2, ',', ' ');
+      };
+    ?>
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-sm-4">
+        <div class="card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-boxes me-1"></i>Références suivies</div>
+            <div class="fs-4 fw-bold"><?= (int) ($summary['references'] ?? 0) ?></div>
+            <div class="small text-muted">Comptes présents dans la fiche de stock</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-4">
+        <div class="card h-100 border-0 shadow-sm stock-summary-trigger" id="Avec_stock_disponible"
+          role="button" tabindex="0" aria-controls="stockStatePanel" aria-pressed="false"
+          data-stock-state="available">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-check-circle me-1 text-success"></i>Avec stock disponible</div>
+            <div class="fs-4 fw-bold text-success"><?= (int) ($summary['availableReferences'] ?? 0) ?></div>
+            <div class="small text-muted">Cliquer pour consulter les comptes avec un solde supérieur à zéro</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-4">
+        <div class="card h-100 border-0 shadow-sm stock-summary-trigger" id="A_approvisioner"
+          role="button" tabindex="0" aria-controls="stockStatePanel" aria-pressed="false"
+          data-stock-state="replenish">
+          <div class="card-body">
+            <div class="small text-muted mb-2"><i class="bi bi-exclamation-circle me-1 text-danger"></i>À réapprovisionner</div>
+            <div class="fs-4 fw-bold text-danger"><?= (int) ($summary['outOfStockReferences'] ?? 0) ?></div>
+            <div class="small text-muted">Cliquer pour consulter les comptes au solde nul ou négatif</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="card border-0 shadow-sm mb-4 stock-state-panel" id="stockStatePanel" aria-live="polite" hidden>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <h3 class="h6 fw-bold mb-1" id="stockStateTitle">État du stock</h3>
+            <p class="small text-muted mb-0" id="stockStateDescription"></p>
+          </div>
+          <button type="button" class="btn-close" id="closeStockStatePanel" aria-label="Fermer la liste"></button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Compte / désignation</th>
+                <th>Lieu</th>
+                <th class="text-end">Quantité</th>
+                <th>Dernière opération</th>
+              </tr>
+            </thead>
+            <tbody id="stockStateTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <div>
+            <h3 class="h6 fw-bold mb-1">Mouvements depuis le début du mois</h3>
+            <p class="small text-muted mb-0"><?= (int) ($summary['monthOperations'] ?? 0) ?> opération(s) enregistrée(s)</p>
+            <p class="small text-muted mb-0">Les quantités suivent les unités saisies dans chaque fiche.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-4">
+            <div>
+              <div class="small text-muted">Quantités entrées</div>
+              <div class="fw-bold text-success"><?= $formatStockNumber($summary['monthIncomingQuantity'] ?? 0) ?></div>
+            </div>
+            <div>
+              <div class="small text-muted">Quantités sorties</div>
+              <div class="fw-bold text-danger"><?= $formatStockNumber($summary['monthOutgoingQuantity'] ?? 0) ?></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="h5 fw-bold mb-3">Historique des mouvements</h3>
     <!-- Filters card (compact, with icons) -->
     <div class="no-print">
       <div class="card mb-3">
@@ -388,6 +498,97 @@ if (session_status() === PHP_SESSION_NONE) {
         </button>
       <?php endif; ?>
     </div>
+    <script>
+      (function () {
+        const panel = document.getElementById('stockStatePanel');
+        const title = document.getElementById('stockStateTitle');
+        const description = document.getElementById('stockStateDescription');
+        const tableBody = document.getElementById('stockStateTableBody');
+        const triggers = document.querySelectorAll('.stock-summary-trigger');
+        const closeButton = document.getElementById('closeStockStatePanel');
+        const stockDetails = <?= json_encode($dashboardStockDetails ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+
+        if (!panel || !tableBody || !triggers.length || !closeButton) return;
+
+        function closePanel() {
+          panel.hidden = true;
+          triggers.forEach((trigger) => {
+            trigger.setAttribute('aria-pressed', 'false');
+            trigger.classList.remove('border-success', 'border-danger');
+          });
+        }
+
+        function showStockState(trigger) {
+          const available = trigger.dataset.stockState === 'available';
+          const matchingStocks = stockDetails.filter((item) => {
+            const quantity = Number(item.quantity || 0);
+            return available ? quantity > 0 : quantity <= 0;
+          });
+
+          title.textContent = available ? 'Comptes avec stock disponible' : 'Comptes à réapprovisionner';
+          description.textContent = matchingStocks.length + ' compte(s) — état basé sur le dernier solde enregistré.';
+          tableBody.replaceChildren();
+
+          if (!matchingStocks.length) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 4;
+            cell.className = 'text-center text-muted py-3';
+            cell.textContent = available
+              ? 'Aucun compte avec un stock disponible.'
+              : 'Aucun compte à réapprovisionner.';
+            row.appendChild(cell);
+            tableBody.appendChild(row);
+          } else {
+            matchingStocks.forEach((item) => {
+              const row = document.createElement('tr');
+              const accountCell = document.createElement('td');
+              const label = document.createElement('strong');
+              label.textContent = item.intitule || item.compte || 'Compte sans intitulé';
+              accountCell.appendChild(label);
+
+              const detail = document.createElement('div');
+              detail.className = 'small text-muted';
+              detail.textContent = [item.compte, item.designation].filter(Boolean).join(' — ');
+              accountCell.appendChild(detail);
+
+              const locationCell = document.createElement('td');
+              locationCell.textContent = item.lieu || '—';
+              const quantityCell = document.createElement('td');
+              quantityCell.className = 'text-end fw-semibold ' + (available ? 'text-success' : 'text-danger');
+              quantityCell.textContent = Number(item.quantity || 0).toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              });
+              const dateCell = document.createElement('td');
+              dateCell.textContent = item.date || '—';
+              row.append(accountCell, locationCell, quantityCell, dateCell);
+              tableBody.appendChild(row);
+            });
+          }
+
+          panel.hidden = false;
+          triggers.forEach((item) => {
+            const isActive = item === trigger;
+            item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            item.classList.remove('border-success', 'border-danger');
+            if (isActive) item.classList.add(available ? 'border-success' : 'border-danger');
+          });
+        }
+
+        triggers.forEach((trigger) => {
+          trigger.addEventListener('click', () => showStockState(trigger));
+          trigger.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              showStockState(trigger);
+            }
+          });
+        });
+
+        closeButton.addEventListener('click', closePanel);
+      })();
+    </script>
     <script>
       <?php
       // Embed logo image as base64 so it works under public docroot
