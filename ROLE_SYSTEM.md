@@ -36,7 +36,8 @@ Le système utilise un contrôle d'accès basé sur les rôles (RBAC) pour sécu
 
 ### 6. **caissier** (Caissier)
 - ✅ Tableau de bord de la caisse : solde, recettes, dépenses et historique
-- ✅ Saisie et gestion des opérations de caisse
+- ✅ Saisie et gestion de ses propres opérations de caisse
+- ✅ Consultation de ses propres soldes et rapports
 - ❌ Dashboard comptable et autres services
 
 ## Implémentation technique
@@ -73,7 +74,8 @@ public function index() {
 | Stock | manager, admin, stock_manager |
 | Relevé | accountant, manager, admin |
 | Dashboard comptable | Tous (filtré par rôle), sauf caissier |
-| Tableau de bord caisse et lecture | caissier, accountant, manager, admin |
+| Tableau de bord caisse et lecture | caissier (ses données uniquement), accountant, comptable, manager, admin |
+| Filtre caisse par caissier | accountant, comptable, manager, admin |
 | Saisie, modification et suppression des opérations de caisse | caissier, admin |
 | Gestion Utilisateurs | admin, manager |
 
@@ -89,6 +91,11 @@ Structure utilisateur dans MongoDB :
   "created_at": "2025-12-17 HH:MM:SS"
 }
 ```
+
+Chaque nouvelle opération de caisse conserve l'identifiant MongoDB de son auteur dans
+`created_by_id` ainsi que son nom dans `created_by`. Les anciennes opérations sont
+rattachées à l'identifiant du compte utilisateur lorsque le nom `created_by` correspond
+à un utilisateur existant. Les soldes sont recalculés séparément pour chaque caissier.
 
 ## Authentification et session
 

@@ -1,6 +1,9 @@
 <?php
-if (session_status() === PHP_SESSION_NONE)
-// Session started in front controller (public/index.php)
+if (session_status() === PHP_SESSION_NONE) {
+  // Session started in front controller (public/index.php)
+}
+$__caisseRole = $_SESSION['user']['role'] ?? 'guest';
+$__canFilterCaisseUser = in_array($__caisseRole, ['admin', 'manager', 'accountant', 'comptable'], true);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -75,7 +78,7 @@ if (session_status() === PHP_SESSION_NONE)
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
       <h3 class="h5 fw-bold mb-0">Historique et gestion des opérations</h3>
-      <a class="btn btn-outline-primary btn-sm" href="?page=caisse&action=export_today">
+      <a class="btn btn-outline-primary btn-sm" href="?page=caisse&action=export_today&<?= http_build_query($filters) ?>">
         <i class="bi bi-file-earmark-pdf me-1"></i>Exporter les opérations du jour
       </a>
     </div>
@@ -127,6 +130,19 @@ if (session_status() === PHP_SESSION_NONE)
               </option>
             </select>
           </div>
+          <?php if ($__canFilterCaisseUser): ?>
+            <div class="col-md-2">
+              <select name="caissier_id" class="form-select" aria-label="Filtrer par caissier">
+                <option value="">Tous les caissiers</option>
+                <?php foreach (($cashiers ?? []) as $cashier): ?>
+                  <option value="<?= htmlspecialchars($cashier['id']) ?>"
+                    <?= ($filters['caissier_id'] ?? '') === $cashier['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($cashier['username']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
           <div class="col-md-1 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100">Filtrer</button>
           </div>
@@ -174,9 +190,17 @@ if (session_status() === PHP_SESSION_NONE)
                   <?php endif; ?>
                 </td>
               </tr>
-            <?php endforeach; else: ?>
+            <?php endforeach; ?>
+            <tr class="table-secondary fw-bold">
+              <td colspan="4">Totaux de toutes les opérations filtrées</td>
+              <td class="text-end"><?= number_format($operationTotals['recettes'] ?? 0, 2) ?></td>
+              <td class="text-end"><?= number_format($operationTotals['depenses'] ?? 0, 2) ?></td>
+              <td class="text-end"><?= number_format($operationTotals['solde'] ?? 0, 2) ?></td>
+              <td></td>
+            </tr>
+          <?php else: ?>
             <tr>
-              <td colspan="9" class="text-center">Aucune opération</td>
+              <td colspan="8" class="text-center">Aucune opération</td>
             </tr>
           <?php endif; ?>
         </tbody>
@@ -544,7 +568,14 @@ if (session_status() === PHP_SESSION_NONE)
                 modalForm.closest('.card')?.querySelector('.card-body')?.prepend(notice);
 
                 // fetch updated tbody and replace it in-place; fallback to full reload on error
-                fetch('?page=caisse&action=list_partial', {
+                const listUrl = new URL('?page=caisse&action=list_partial', window.location.href);
+                const filterForm = document.querySelector('form[method="get"]');
+                if (filterForm) {
+                  new FormData(filterForm).forEach((value, key) => {
+                    if (value) listUrl.searchParams.set(key, value);
+                  });
+                }
+                fetch(listUrl.toString(), {
                   credentials: 'same-origin',
                   cache: 'no-store',
                   headers: {

@@ -45,6 +45,37 @@ class UserModel extends Model
     {
         return $this->collection->find()->toArray();
     }
+    public function getCashiers()
+    {
+        $users = $this->collection->find(
+            ['role' => 'caissier'],
+            ['projection' => ['username' => 1], 'sort' => ['username' => 1]]
+        );
+        $cashiers = [];
+        foreach ($users as $user) {
+            if (isset($user['_id'], $user['username'])) {
+                $cashiers[] = [
+                    'id' => (string) $user['_id'],
+                    'username' => (string) $user['username']
+                ];
+            }
+        }
+        return $cashiers;
+    }
+    public function findCashierById($id)
+    {
+        if (!is_string($id) || !preg_match('/^[a-f0-9]{24}$/i', $id)) {
+            return null;
+        }
+        $user = $this->collection->findOne(
+            ['_id' => new \MongoDB\BSON\ObjectId($id), 'role' => 'caissier'],
+            ['projection' => ['username' => 1]]
+        );
+        if (!$user || !isset($user['username'])) {
+            return null;
+        }
+        return ['id' => (string) $user['_id'], 'username' => (string) $user['username']];
+    }
     public function updateRole($userId, $role)
     {
         return $this->collection->updateOne(

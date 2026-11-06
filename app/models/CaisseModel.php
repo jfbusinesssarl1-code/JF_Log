@@ -19,6 +19,7 @@ class CaisseModel extends Model
       $this->collection->createIndex(['type' => 1]);
       $this->collection->createIndex(['operateur' => 1]);
       $this->collection->createIndex(['numero_bon_manuscrit' => 1]);
+      $this->collection->createIndex(['created_by_id' => 1, 'date' => 1]);
       $this->collection->createIndex(['created_at' => -1]);
     } catch (\Throwable $e) {
     }
@@ -29,34 +30,61 @@ class CaisseModel extends Model
     $data['created_at'] = date('Y-m-d H:i:s');
     $data['montant'] = floatval($data['montant'] ?? 0);
     $res = $this->collection->insertOne($data);
-    // Recompute solde for all entries to ensure each document has a stored solde
     try {
-      $this->recomputeAllSoldes();
+      if (($data['created_by_id'] ?? null) instanceof ObjectIdBson) {
+        $this->recomputeCreatorSoldes((string) $data['created_by_id'], $data['created_by'] ?? '');
+      } else {
+        $this->recomputeAllSoldes();
+      }
     } catch (\Throwable $e) {
       error_log('CaisseModel::insert recomputeAllSoldes failed: ' . $e->getMessage());
     }
     return $res;
   }
 
-  public function update($id, $data)
+  public function update($id, $data, $creatorId = null, $creatorUsername = null)
   {
+    $query = ['_id' => new ObjectIdBson($id)];
+    $creatorQuery = $this->buildCreatorQuery([
+      'creator_id' => $creatorId,
+      'creator_username' => $creatorUsername
+    ]);
+    if ($creatorQuery) {
+      $query = array_merge($query, $creatorQuery);
+    }
     $res = $this->collection->updateOne(
-      ['_id' => new ObjectIdBson($id)],
+      $query,
       ['$set' => $data]
     );
     try {
-      $this->recomputeAllSoldes();
+      if ($creatorId !== null || $creatorUsername !== null) {
+        $this->recomputeCreatorSoldes($creatorId, $creatorUsername);
+      } else {
+        $this->recomputeAllSoldes();
+      }
     } catch (\Throwable $e) {
       error_log('CaisseModel::update recomputeAllSoldes failed: ' . $e->getMessage());
     }
     return $res;
   }
 
-  public function delete($id)
+  public function delete($id, $creatorId = null, $creatorUsername = null)
   {
-    $res = $this->collection->deleteOne(['_id' => new ObjectIdBson($id)]);
+    $query = ['_id' => new ObjectIdBson($id)];
+    $creatorQuery = $this->buildCreatorQuery([
+      'creator_id' => $creatorId,
+      'creator_username' => $creatorUsername
+    ]);
+    if ($creatorQuery) {
+      $query = array_merge($query, $creatorQuery);
+    }
+    $res = $this->collection->deleteOne($query);
     try {
-      $this->recomputeAllSoldes();
+      if ($creatorId !== null || $creatorUsername !== null) {
+        $this->recomputeCreatorSoldes($creatorId, $creatorUsername);
+      } else {
+        $this->recomputeAllSoldes();
+      }
     } catch (\Throwable $e) {
       error_log('CaisseModel::delete recomputeAllSoldes failed: ' . $e->getMessage());
     }
@@ -65,29 +93,11 @@ class CaisseModel extends Model
 
   public function getAll($filters = [])
   {
-    $query = [];
-    if (!empty($filters['date_debut']) || !empty($filters['date_fin'])) {
-      $range = [];
-      if (!empty($filters['date_debut']))
-        $range['$gte'] = $filters['date_debut'];
-      if (!empty($filters['date_fin']))
-        $range['$lte'] = $filters['date_fin'];
-      if ($range)
-        $query['date'] = $range;
-    }
-    if (!empty($filters['type'])) {
-      $query['type'] = $filters['type'];
-    }
-    if (!empty($filters['operateur'])) {
-      $query['operateur'] = $filters['operateur'];
-    }
-    if (!empty($filters['numero_bon_manuscrit'])) {
-      $query['numero_bon_manuscrit'] = $filters['numero_bon_manuscrit'];
-    }
+    $query = $this->buildQuery($filters);
     $options = ['sort' => ['date' => 1, '_id' => 1]];
     $items = $this->collection->find($query, $options)->toArray();
 
-    // If documents do not have stored 'solde', recompute global soldes and re-fetch once
+    // Recompute the applicable balance stream if an older operation has no stored balance.
     $needRecompute = false;
     foreach ($items as $it) {
       if (!isset($it['solde'])) {
@@ -97,10 +107,10 @@ class CaisseModel extends Model
     }
     if ($needRecompute) {
       try {
-        $this->recomputeAllSoldes();
+        $this->recomputeForFilters($filters);
         $items = $this->collection->find($query, $options)->toArray();
       } catch (\Throwable $e) {
-        error_log('CaisseModel::getAll recomputeAllSoldes failed: ' . $e->getMessage());
+        error_log('CaisseModel::getAll balance recomputation failed: ' . $e->getMessage());
       }
     }
 
@@ -121,25 +131,7 @@ class CaisseModel extends Model
 
   public function getAllWithPagination($filters = [], $page = 1, $itemsPerPage = 20)
   {
-    $query = [];
-    if (!empty($filters['date_debut']) || !empty($filters['date_fin'])) {
-      $range = [];
-      if (!empty($filters['date_debut']))
-        $range['$gte'] = $filters['date_debut'];
-      if (!empty($filters['date_fin']))
-        $range['$lte'] = $filters['date_fin'];
-      if ($range)
-        $query['date'] = $range;
-    }
-    if (!empty($filters['type'])) {
-      $query['type'] = $filters['type'];
-    }
-    if (!empty($filters['operateur'])) {
-      $query['operateur'] = $filters['operateur'];
-    }
-    if (!empty($filters['numero_bon_manuscrit'])) {
-      $query['numero_bon_manuscrit'] = $filters['numero_bon_manuscrit'];
-    }
+    $query = $this->buildQuery($filters);
 
     // Initialiser la pagination
     $pagination = new PaginationHelper($page, $itemsPerPage);
@@ -156,7 +148,7 @@ class CaisseModel extends Model
     ];
     $items = $this->collection->find($query, $options)->toArray();
 
-    // If any item lacks stored solde, recompute globally and re-fetch
+    // Recompute the applicable balance stream if an older operation has no stored balance.
     $needRecompute = false;
     foreach ($items as $it) {
       if (!isset($it['solde'])) {
@@ -166,10 +158,10 @@ class CaisseModel extends Model
     }
     if ($needRecompute) {
       try {
-        $this->recomputeAllSoldes();
+        $this->recomputeForFilters($filters);
         $items = $this->collection->find($query, $options)->toArray();
       } catch (\Throwable $e) {
-        error_log('CaisseModel::getAllWithPagination recomputeAllSoldes failed: ' . $e->getMessage());
+        error_log('CaisseModel::getAllWithPagination balance recomputation failed: ' . $e->getMessage());
       }
     }
 
@@ -192,31 +184,82 @@ class CaisseModel extends Model
   }
 
   /**
-   * Recompute and persist the cumulative 'solde' for all documents in the collection.
-   * This writes the computed solde back to each document (only when it differs) so
-   * that filtering does not change the stored balances.
+   * Recompute and persist cumulative balances independently for each creator.
    */
   private function recomputeAllSoldes()
   {
     $cursor = $this->collection->find([], ['sort' => ['date' => 1, '_id' => 1]]);
-    $solde = 0.0;
+    $soldes = [];
     foreach ($cursor as $doc) {
+      $creator = isset($doc['created_by_id'])
+        ? (string) $doc['created_by_id']
+        : (string) ($doc['created_by'] ?? 'legacy');
+      if (!isset($soldes[$creator])) {
+        $soldes[$creator] = 0.0;
+      }
       $montant = floatval($doc['montant'] ?? 0);
       if (($doc['type'] ?? '') === 'entree') {
-        $solde += $montant;
+        $soldes[$creator] += $montant;
       } else {
-        $solde -= $montant;
+        $soldes[$creator] -= $montant;
       }
       $current = isset($doc['solde']) ? floatval($doc['solde']) : null;
-      if ($current !== $solde) {
-        $this->collection->updateOne(['_id' => $doc['_id']], ['$set' => ['solde' => $solde]]);
+      if ($current !== $soldes[$creator]) {
+        $this->collection->updateOne(
+          ['_id' => $doc['_id']],
+          ['$set' => ['solde' => $soldes[$creator]]]
+        );
       }
     }
   }
 
-  public function getById($id)
+  public function recomputeCreatorSoldes($creatorId, $creatorUsername): void
   {
-    return $this->collection->findOne(['_id' => new ObjectIdBson($id)]);
+    $creatorQuery = $this->buildCreatorQuery([
+      'creator_id' => $creatorId,
+      'creator_username' => $creatorUsername
+    ]);
+    if (!$creatorQuery) {
+      return;
+    }
+
+    $cursor = $this->collection->find($creatorQuery, ['sort' => ['date' => 1, '_id' => 1]]);
+    $balance = 0.0;
+    foreach ($cursor as $doc) {
+      $amount = (float) ($doc['montant'] ?? 0);
+      $balance += (($doc['type'] ?? '') === 'entree') ? $amount : -$amount;
+      if (!isset($doc['solde']) || (float) $doc['solde'] !== $balance) {
+        $this->collection->updateOne(
+          ['_id' => $doc['_id']],
+          ['$set' => ['solde' => $balance]]
+        );
+      }
+    }
+  }
+
+  private function recomputeForFilters($filters): void
+  {
+    if (!empty($filters['creator_id']) || !empty($filters['creator_username'])) {
+      $this->recomputeCreatorSoldes(
+        $filters['creator_id'] ?? '',
+        $filters['creator_username'] ?? ''
+      );
+      return;
+    }
+    $this->recomputeAllSoldes();
+  }
+
+  public function getById($id, $creatorId = null, $creatorUsername = null)
+  {
+    $query = ['_id' => new ObjectIdBson($id)];
+    $creatorQuery = $this->buildCreatorQuery([
+      'creator_id' => $creatorId,
+      'creator_username' => $creatorUsername
+    ]);
+    if ($creatorQuery) {
+      $query = array_merge($query, $creatorQuery);
+    }
+    return $this->collection->findOne($query);
   }
 
   public function countAll($query = [])
@@ -224,7 +267,54 @@ class CaisseModel extends Model
     return $this->collection->countDocuments($query);
   }
 
-  public function getDashboardSummary($today, $monthStart)
+  public function countFiltered($filters = [])
+  {
+    return $this->collection->countDocuments($this->buildQuery($filters));
+  }
+
+  public function getOperationTotals($filters = []): array
+  {
+    $query = $this->buildQuery($filters);
+    $pipeline = [];
+    if ($query) {
+      $pipeline[] = ['$match' => $query];
+    }
+    $pipeline[] =
+      [
+        '$group' => [
+          '_id' => null,
+          'recettes' => [
+            '$sum' => [
+              '$cond' => [
+                ['$eq' => ['$type', 'entree']],
+                ['$ifNull' => ['$montant', 0]],
+                0
+              ]
+            ]
+          ],
+          'depenses' => [
+            '$sum' => [
+              '$cond' => [
+                ['$eq' => ['$type', 'sortie']],
+                ['$ifNull' => ['$montant', 0]],
+                0
+              ]
+            ]
+          ]
+        ]
+      ];
+    $result = $this->collection->aggregate($pipeline)->toArray();
+    $recettes = (float) ($result[0]['recettes'] ?? 0);
+    $depenses = (float) ($result[0]['depenses'] ?? 0);
+
+    return [
+      'recettes' => $recettes,
+      'depenses' => $depenses,
+      'solde' => $recettes - $depenses
+    ];
+  }
+
+  public function getDashboardSummary($today, $monthStart, $filters = [])
   {
     $amount = ['$ifNull' => ['$montant', 0]];
     $isToday = ['$eq' => ['$date', $today]];
@@ -236,19 +326,14 @@ class CaisseModel extends Model
     ];
     $isIncome = ['$eq' => ['$type', 'entree']];
 
-    $result = $this->collection->aggregate([
-      [
+    $pipeline = [];
+    $creatorQuery = $this->buildCreatorQuery($filters);
+    if ($creatorQuery) {
+      $pipeline[] = ['$match' => $creatorQuery];
+    }
+    $pipeline[] = [
         '$group' => [
           '_id' => null,
-          'balance' => [
-            '$sum' => [
-              '$cond' => [
-                $isIncome,
-                $amount,
-                ['$multiply' => [$amount, -1]]
-              ]
-            ]
-          ],
           'todayIncome' => [
             '$sum' => [
               '$cond' => [
@@ -289,8 +374,27 @@ class CaisseModel extends Model
             '$sum' => ['$cond' => [$isCurrentMonth, 1, 0]]
           ]
         ]
+    ];
+    $result = $this->collection->aggregate($pipeline)->toArray();
+
+    $balancePipeline = [];
+    if ($creatorQuery) {
+      $balancePipeline[] = ['$match' => $creatorQuery];
+    }
+    $balancePipeline[] = ['$sort' => ['date' => 1, '_id' => 1]];
+    $balancePipeline[] = [
+      '$group' => [
+        '_id' => ['$ifNull' => ['$created_by_id', '$created_by']],
+        'balance' => ['$last' => ['$ifNull' => ['$solde', 0]]]
       ]
-    ])->toArray();
+    ];
+    $balancePipeline[] = [
+      '$group' => [
+        '_id' => null,
+        'balance' => ['$sum' => '$balance']
+      ]
+    ];
+    $balanceResult = $this->collection->aggregate($balancePipeline)->toArray();
 
     $summary = [
       'balance' => 0.0,
@@ -302,12 +406,90 @@ class CaisseModel extends Model
     ];
     if (!empty($result)) {
       foreach ($summary as $key => $default) {
-        $summary[$key] = $key === 'monthOperations'
-          ? (int) ($result[0][$key] ?? $default)
-          : (float) ($result[0][$key] ?? $default);
+        if ($key !== 'balance') {
+          $summary[$key] = $key === 'monthOperations'
+            ? (int) ($result[0][$key] ?? $default)
+            : (float) ($result[0][$key] ?? $default);
+        }
       }
+    }
+    if (!empty($balanceResult)) {
+      $summary['balance'] = (float) ($balanceResult[0]['balance'] ?? 0);
     }
 
     return $summary;
+  }
+
+  public function backfillCreatorIds()
+  {
+    $users = $this->db->users->find(
+      ['username' => ['$type' => 'string']],
+      ['projection' => ['username' => 1]]
+    );
+    $updated = false;
+    foreach ($users as $user) {
+      $result = $this->collection->updateMany(
+        [
+          'created_by' => $user['username'],
+          'created_by_id' => ['$exists' => false]
+        ],
+        ['$set' => ['created_by_id' => $user['_id']]]
+      );
+      if ($result->getModifiedCount() > 0) {
+        $updated = true;
+      }
+    }
+    if ($updated) {
+      $this->recomputeAllSoldes();
+    }
+  }
+
+  private function buildQuery($filters = [])
+  {
+    $query = [];
+    if (!empty($filters['date_debut']) || !empty($filters['date_fin'])) {
+      $range = [];
+      if (!empty($filters['date_debut'])) {
+        $range['$gte'] = $filters['date_debut'];
+      }
+      if (!empty($filters['date_fin'])) {
+        $range['$lte'] = $filters['date_fin'];
+      }
+      if ($range) {
+        $query['date'] = $range;
+      }
+    }
+    foreach (['type', 'operateur', 'numero_bon_manuscrit'] as $field) {
+      if (!empty($filters[$field])) {
+        $query[$field] = $filters[$field];
+      }
+    }
+
+    $creatorQuery = $this->buildCreatorQuery($filters);
+    return $creatorQuery ? array_merge($query, $creatorQuery) : $query;
+  }
+
+  private function buildCreatorQuery($filters = [])
+  {
+    $creatorId = $filters['creator_id'] ?? '';
+    $creatorUsername = $filters['creator_username'] ?? '';
+    if ($creatorId === '' && $creatorUsername === '') {
+      return [];
+    }
+
+    $conditions = [];
+    if (is_string($creatorId) && preg_match('/^[a-f0-9]{24}$/i', $creatorId)) {
+      $conditions[] = ['created_by_id' => new ObjectIdBson($creatorId)];
+    }
+    if (is_string($creatorUsername) && $creatorUsername !== '') {
+      $conditions[] = [
+        'created_by' => $creatorUsername,
+        'created_by_id' => ['$exists' => false]
+      ];
+    }
+    if (count($conditions) === 1) {
+      return $conditions[0];
+    }
+    return $conditions ? ['$or' => $conditions] : ['_id' => ['$exists' => false]];
   }
 }

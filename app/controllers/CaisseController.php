@@ -2,61 +2,37 @@
 namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\CaisseModel;
+use App\Models\UserModel;
 use Mpdf\Mpdf;
 class CaisseController extends Controller
 {
   public function index()
   {
-    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
+    $this->requireRole(['caissier', 'accountant', 'comptable', 'manager', 'admin']);
     $model = new CaisseModel();
-    $filters = [
-      'date_debut' => $_GET['date_debut'] ?? '',
-      'date_fin' => $_GET['date_fin'] ?? '',
-      'type' => $_GET['type'] ?? '',
-      'operateur' => $_GET['operateur'] ?? '',
-      'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? ''
-    ];
+    [$filters, $modelFilters, $cashiers, $selectedCashierName] = $this->getFilterContext();
+    $this->prepareCreatorData($model, $modelFilters);
 
-    // Déterminer le nombre de pages pour afficher la dernière par défaut
     $itemsPerPage = 20;
-
-    // Compter le nombre total d'éléments pour déterminer la dernière page
-    $query = [];
-    if (!empty($filters['date_debut']) || !empty($filters['date_fin'])) {
-      $range = [];
-      if (!empty($filters['date_debut']))
-        $range['$gte'] = $filters['date_debut'];
-      if (!empty($filters['date_fin']))
-        $range['$lte'] = $filters['date_fin'];
-      if ($range)
-        $query['date'] = $range;
-    }
-    if (!empty($filters['type'])) {
-      $query['type'] = $filters['type'];
-    }
-    if (!empty($filters['operateur'])) {
-      $query['operateur'] = $filters['operateur'];
-    }
-    if (!empty($filters['numero_bon_manuscrit'])) {
-      $query['numero_bon_manuscrit'] = $filters['numero_bon_manuscrit'];
-    }
-
-    $totalCount = $model->countAll($query);
+    $totalCount = $model->countFiltered($modelFilters);
     $totalPages = ceil($totalCount / $itemsPerPage);
 
-    // Si page_num n'est pas fourni, afficher la dernière page
     $page = isset($_GET['page_num']) ? (int) $_GET['page_num'] : max(1, $totalPages);
 
-    $result = $model->getAllWithPagination($filters, $page, $itemsPerPage);
+    $result = $model->getAllWithPagination($modelFilters, $page, $itemsPerPage);
     $items = $result['items'];
     $pagination = $result['pagination'];
+    $operationTotals = $model->getOperationTotals($modelFilters);
     $today = date('Y-m-d');
-    $summary = $model->getDashboardSummary($today, date('Y-m-01'));
+    $summary = $model->getDashboardSummary($today, date('Y-m-01'), $modelFilters);
 
     $this->render('caisse', [
       'items' => $items,
       'filters' => $filters,
+      'cashiers' => $cashiers,
+      'selectedCashierName' => $selectedCashierName,
       'pagination' => $pagination,
+      'operationTotals' => $operationTotals,
       'summary' => $summary,
       'dashboardDate' => $today
     ]);
@@ -65,24 +41,19 @@ class CaisseController extends Controller
   // Retourne uniquement le <tbody> (utilisé pour refresh partiel via AJAX)
   public function list_partial()
   {
-    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
+    $this->requireRole(['caissier', 'accountant', 'comptable', 'manager', 'admin']);
     $model = new CaisseModel();
-    $filters = [
-      'date_debut' => $_GET['date_debut'] ?? '',
-      'date_fin' => $_GET['date_fin'] ?? '',
-      'type' => $_GET['type'] ?? '',
-      'operateur' => $_GET['operateur'] ?? '',
-      'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? ''
-    ];
-    $items = $model->getAll($filters);
+    [, $modelFilters] = $this->getFilterContext();
+    $this->prepareCreatorData($model, $modelFilters);
+    $items = $model->getAll($modelFilters);
+    $operationTotals = $model->getOperationTotals($modelFilters);
     header('Content-Type: text/html; charset=utf-8');
     // Provide the number of rows to help clients validate partial updates
-    header('X-Row-Count: ' . count($items));
+    header('X-Row-Count: ' . (count($items) + 1));
     if (!empty($items)) {
       foreach ($items as $it) {
         $id = isset($it['_id']) ? (string) $it['_id'] : '';
         $date = htmlspecialchars($it['date'] ?? '');
-        $type = htmlspecialchars($it['type'] ?? '');
         $num = htmlspecialchars($it['numero_bon_manuscrit'] ?? '');
         $oper = htmlspecialchars($it['operateur'] ?? '');
         $lib = htmlspecialchars($it['libelle'] ?? '');
@@ -91,23 +62,29 @@ class CaisseController extends Controller
         $solde = number_format($it['solde'] ?? 0, 2);
         echo "<tr>\n";
         echo "<td>$date</td>\n";
-        echo "<td>$type</td>\n";
         echo "<td>$num</td>\n";
         echo "<td>$oper</td>\n";
         echo "<td>$lib</td>\n";
+        if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])) {
+          $csrfToken = \App\Core\Csrf::getToken();
+          $actions = "<a class=\"btn btn-sm btn-primary\" href=\"?page=caisse&action=edit&id=$id\">Modifier</a> <a class=\"btn btn-sm btn-danger\" href=\"?page=caisse&action=delete&id=$id&token=" . urlencode($csrfToken) . "\" onclick=\"return confirm('Supprimer ?')\">Supprimer</a>";
+        } else {
+          $actions = '—';
+        }
         echo "<td class=\"text-end\">$recette</td>\n";
         echo "<td class=\"text-end\">$depense</td>\n";
         echo "<td class=\"text-end\">$solde</td>\n";
-        if (isset($_SESSION['user']['role']) && in_array($_SESSION['user']['role'], ['caissier', 'admin'])) {
-          $csrfToken = \App\Core\Csrf::getToken();
-          echo "<td><a class=\"btn btn-sm btn-primary\" href=\"?page=caisse&action=edit&id=$id\">Modifier</a> <a class=\"btn btn-sm btn-danger\" href=\"?page=caisse&action=delete&id=$id&token=" . urlencode($csrfToken) . "\" onclick=\"return confirm('Supprimer ?')\">Supprimer</a></td>\n";
-        } else {
-          echo "<td>—</td>\n";
-        }
+        echo "<td class=\"d-flex justify-content-center gap-2\">$actions</td>\n";
         echo "</tr>\n";
       }
+      echo '<tr class="table-secondary fw-bold">';
+      echo '<td colspan="4">Totaux des opérations</td>';
+      echo '<td class="text-end">' . number_format($operationTotals['recettes'], 2) . '</td>';
+      echo '<td class="text-end">' . number_format($operationTotals['depenses'], 2) . '</td>';
+      echo '<td class="text-end">' . number_format($operationTotals['solde'], 2) . '</td>';
+      echo '<td></td></tr>';
     } else {
-      echo '<tr><td colspan="9" class="text-center">Aucune opération</td></tr>';
+      echo '<tr><td colspan="8" class="text-center">Aucune opération</td></tr>';
     }
     exit;
   }
@@ -172,6 +149,18 @@ class CaisseController extends Controller
         'operateur' => $operateur,
         'created_by' => $user['username'] ?? 'unknown'
       ];
+      $creatorId = $user['_id'] ?? '';
+      if (!is_string($creatorId) || !preg_match('/^[a-f0-9]{24}$/i', $creatorId)) {
+        http_response_code(400);
+        if ($isAjax) {
+          header('Content-Type: application/json; charset=utf-8');
+        }
+        echo $isAjax
+          ? json_encode(['success' => false, 'error' => 'Identifiant utilisateur invalide'])
+          : 'Identifiant utilisateur invalide';
+        exit;
+      }
+      $data['created_by_id'] = new \MongoDB\BSON\ObjectId($creatorId);
 
       $model = new CaisseModel();
       try {
@@ -197,7 +186,10 @@ class CaisseController extends Controller
           exit;
         }
         // Recalculate solde by fetching items (getAll computes cumulative solde)
-        $all = $model->getAll();
+        $all = $model->getAll([
+          'creator_id' => $creatorId,
+          'creator_username' => $user['username'] ?? ''
+        ]);
         $found = null;
         foreach ($all as $it) {
           if ((string) ($it['_id'] ?? '') === $insertedId) {
@@ -229,6 +221,7 @@ class CaisseController extends Controller
     $this->requireRole(['caissier', 'admin']);
     $id = $_GET['id'] ?? null;
     $model = new CaisseModel();
+    [$ownerId, $ownerUsername] = $this->getOwnerScope();
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id) {
       $token = $_POST['csrf_token'] ?? '';
       if (!\App\Core\Csrf::checkToken($token))
@@ -241,11 +234,11 @@ class CaisseController extends Controller
         'numero_bon_manuscrit' => trim($_POST['numero_bon_manuscrit'] ?? ''),
         'operateur' => trim($_POST['operateur'] ?? '')
       ];
-      $model->update($id, $data);
+      $model->update($id, $data, $ownerId, $ownerUsername);
       header('Location: ?page=caisse');
       exit;
     }
-    $entry = $id ? $model->getById($id) : null;
+    $entry = $id ? $model->getById($id, $ownerId, $ownerUsername) : null;
     $this->render('caisse_edit', ['entry' => $entry]);
   }
 
@@ -259,7 +252,8 @@ class CaisseController extends Controller
       $_SESSION['flash_error'] = 'Erreur CSRF - opération annulée';
     } elseif ($id) {
       $model = new CaisseModel();
-      $model->delete($id);
+      [$ownerId, $ownerUsername] = $this->getOwnerScope();
+      $model->delete($id, $ownerId, $ownerUsername);
     }
     header('Location: ?page=caisse');
     exit;
@@ -267,7 +261,7 @@ class CaisseController extends Controller
 
   public function export()
   {
-    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
+    $this->requireRole(['caissier', 'accountant', 'comptable', 'manager', 'admin']);
     $format = $_GET['format'] ?? 'pdf';
     // Normalize: only PDF exports supported
     if ($format !== 'pdf')
@@ -281,17 +275,10 @@ class CaisseController extends Controller
       exit;
     }
 
-    // Récupérer les filtres de la même manière que dans index()
-    $filters = [
-      'date_debut' => $_GET['date_debut'] ?? '',
-      'date_fin' => $_GET['date_fin'] ?? '',
-      'type' => $_GET['type'] ?? '',
-      'operateur' => $_GET['operateur'] ?? '',
-      'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? ''
-    ];
-
     $model = new CaisseModel();
-    $items = $model->getAll($filters);
+    [$filters, $modelFilters, , $selectedCashierName] = $this->getFilterContext();
+    $this->prepareCreatorData($model, $modelFilters);
+    $items = $model->getAll($modelFilters);
 
     // Build header with logo and company info
     $logoPath = realpath(__DIR__ . '/../../assets/images/logo.png');
@@ -325,6 +312,9 @@ class CaisseController extends Controller
       $activeFilters[] = 'Opérateur: ' . htmlspecialchars($filters['operateur']);
     if (!empty($filters['numero_bon_manuscrit']))
       $activeFilters[] = 'N° Bon: ' . htmlspecialchars($filters['numero_bon_manuscrit']);
+    if ($selectedCashierName !== '') {
+      $activeFilters[] = 'Caissier: ' . htmlspecialchars($selectedCashierName);
+    }
 
     if (!empty($activeFilters)) {
       $header .= '<div style="background:#f8f9fa;padding:8px;margin-bottom:12px;border:1px solid #dee2e6;border-radius:4px;">';
@@ -338,11 +328,14 @@ class CaisseController extends Controller
 
     $totalRecettes = 0.0;
     $totalDepenses = 0.0;
-    $soldeFinal = 0.0;
+    $soldesFinauxParCaissier = [];
     foreach ($items as $it) {
       $totalRecettes += (float) ($it['recette'] ?? 0);
       $totalDepenses += (float) ($it['depense'] ?? 0);
-      $soldeFinal = (float) ($it['solde'] ?? 0);
+      $creatorKey = isset($it['created_by_id'])
+        ? (string) $it['created_by_id']
+        : (string) ($it['created_by'] ?? 'legacy');
+      $soldesFinauxParCaissier[$creatorKey] = (float) ($it['solde'] ?? 0);
       $html .= '<tr>';
       $html .= '<td>' . htmlspecialchars($it['date'] ?? '') . '</td>';
       $html .= '<td>' . htmlspecialchars($it['type'] ?? '') . '</td>';
@@ -352,6 +345,7 @@ class CaisseController extends Controller
       $html .= '<td style="text-align:right">' . number_format($it['solde'] ?? 0, 2, '.', '') . '</td>';
       $html .= '</tr>';
     }
+    $soldeFinal = array_sum($soldesFinauxParCaissier);
     $html .= '<tr style="font-weight:bold;background:#f1f3f5;">';
     $html .= '<td colspan="3">Totaux</td>';
     $html .= '<td style="text-align:right">' . number_format($totalRecettes, 2, '.', '') . '</td>';
@@ -395,13 +389,21 @@ class CaisseController extends Controller
 
   public function exportToday()
   {
-    $this->requireRole(['caissier', 'accountant', 'manager', 'admin']);
+    $this->requireRole(['caissier', 'accountant', 'comptable', 'manager', 'admin']);
     $today = date('Y-m-d');
     $model = new CaisseModel();
-    $items = $model->getAll(['date_debut' => $today, 'date_fin' => $today]);
-    $summary = $model->getDashboardSummary($today, date('Y-m-01'));
+    [, $modelFilters, , $selectedCashierName] = $this->getFilterContext();
+    $this->prepareCreatorData($model, $modelFilters);
+    $modelFilters['date_debut'] = $today;
+    $modelFilters['date_fin'] = $today;
+    $items = $model->getAll($modelFilters);
+    $summary = $model->getDashboardSummary($today, date('Y-m-01'), $modelFilters);
 
-    $header = \App\Helpers\PdfHelper::renderHeader('Opérations de caisse du ' . $today);
+    $title = 'Opérations de caisse du ' . $today;
+    if ($selectedCashierName !== '') {
+      $title .= ' — ' . $selectedCashierName;
+    }
+    $header = \App\Helpers\PdfHelper::renderHeader($title);
     $footer = \App\Helpers\PdfHelper::renderFooter();
     $html = '<div style="font-family: sans-serif;">' . $header;
     $html .= '<table style="width:100%;margin:16px 0;border-collapse:collapse;" cellpadding="8"><tbody>';
@@ -459,5 +461,71 @@ class CaisseController extends Controller
       . '<main class="caisse-export-content">' . $html . '</main>'
       . '<footer class="caisse-export-footer">' . $footer . '</footer></body></html>';
     exit;
+  }
+
+  private function getFilterContext()
+  {
+    $filters = [
+      'date_debut' => $_GET['date_debut'] ?? '',
+      'date_fin' => $_GET['date_fin'] ?? '',
+      'type' => $_GET['type'] ?? '',
+      'operateur' => $_GET['operateur'] ?? '',
+      'numero_bon_manuscrit' => $_GET['numero_bon_manuscrit'] ?? '',
+      'caissier_id' => ''
+    ];
+    $modelFilters = $filters;
+    $cashiers = [];
+    $selectedCashierName = '';
+    $role = $_SESSION['user']['role'] ?? 'user';
+    $canFilterCashier = in_array($role, ['admin', 'manager', 'accountant', 'comptable'], true);
+
+    if ($role === 'caissier') {
+      $modelFilters['creator_id'] = $_SESSION['user']['_id'] ?? '';
+      $modelFilters['creator_username'] = $_SESSION['user']['username'] ?? '';
+    } elseif ($canFilterCashier) {
+      $userModel = new UserModel();
+      $cashiers = $userModel->getCashiers();
+      $selectedId = trim((string) ($_GET['caissier_id'] ?? ''));
+      if ($selectedId !== '') {
+        $filters['caissier_id'] = $selectedId;
+        $modelFilters['caissier_id'] = $selectedId;
+        $cashier = $userModel->findCashierById($selectedId);
+        if ($cashier) {
+          $modelFilters['creator_id'] = $cashier['id'];
+          $modelFilters['creator_username'] = $cashier['username'];
+          $selectedCashierName = $cashier['username'];
+        } else {
+          $modelFilters['creator_id'] = $selectedId;
+        }
+      }
+    }
+
+    return [$filters, $modelFilters, $cashiers, $selectedCashierName];
+  }
+
+  private function getOwnerScope()
+  {
+    if (($_SESSION['user']['role'] ?? '') !== 'caissier') {
+      return [null, null];
+    }
+    return [
+      $_SESSION['user']['_id'] ?? '',
+      $_SESSION['user']['username'] ?? ''
+    ];
+  }
+
+  private function prepareCreatorData(CaisseModel $model, array $filters): void
+  {
+    $role = $_SESSION['user']['role'] ?? 'user';
+    if (in_array($role, ['admin', 'manager', 'accountant', 'comptable'], true)) {
+      $model->backfillCreatorIds();
+    }
+
+    if (!empty($filters['creator_id']) || !empty($filters['creator_username'])) {
+      $model->recomputeCreatorSoldes(
+        $filters['creator_id'] ?? '',
+        $filters['creator_username'] ?? ''
+      );
+    }
   }
 }

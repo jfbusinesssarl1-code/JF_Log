@@ -55,7 +55,7 @@ $__role = $_SESSION['user']['role'] ?? 'guest';
               href="?page=stock">Stock</a></li>
           <li class="nav-item"><a class="nav-link <?= ($currentPage === 'releve') ? 'active' : '' ?>"
               href="?page=releve">Relevé</a></li>
-          <?php if (in_array($__role, ['caissier', 'accountant', 'manager', 'admin', 'comptable'])): ?>
+          <?php if (in_array($__role, ['caissier', 'accountant', 'comptable', 'manager', 'admin'])): ?>
             <li class="nav-item"><a class="nav-link <?= ($currentPage === 'caisse') ? 'active' : '' ?>"
                 href="?page=caisse">Caisse</a></li>
           <?php endif; ?>
