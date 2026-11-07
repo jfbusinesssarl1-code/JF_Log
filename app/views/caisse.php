@@ -505,7 +505,10 @@ $__canFilterCaisseUser = in_array($__caisseRole, ['admin', 'manager', 'accountan
               const ctype = (res.headers.get('content-type') || '');
               const isJson = ctype.indexOf('application/json') !== -1;
               if (!res.ok) {
-                const txt = await res.text().catch(() => res.statusText);
+                const errorBody = isJson ? await res.json().catch(() => null) : null;
+                const txt = errorBody && errorBody.error
+                  ? errorBody.error
+                  : (isJson ? res.statusText : await res.text().catch(() => res.statusText));
                 throw new Error(txt || 'Erreur réseau');
               }
               if (!isJson) {

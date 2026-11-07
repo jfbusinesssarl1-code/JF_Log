@@ -165,6 +165,15 @@ class CaisseController extends Controller
       $model = new CaisseModel();
       try {
         $insertResult = $model->insert($data);
+      } catch (\DomainException $e) {
+        if ($isAjax) {
+          header('Content-Type: application/json; charset=utf-8');
+          http_response_code(422);
+          echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+          exit;
+        }
+        http_response_code(422);
+        die(htmlspecialchars($e->getMessage()));
       } catch (\Throwable $e) {
         error_log('CaisseController::add insert failed: ' . $e->getMessage());
         if ($isAjax) {

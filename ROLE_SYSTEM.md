@@ -96,6 +96,8 @@ Chaque nouvelle opération de caisse conserve l'identifiant MongoDB de son auteu
 `created_by_id` ainsi que son nom dans `created_by`. Les anciennes opérations sont
 rattachées à l'identifiant du compte utilisateur lorsque le nom `created_by` correspond
 à un utilisateur existant. Les soldes sont recalculés séparément pour chaque caissier.
+Une sortie de caisse n'est acceptée que si le solde de son auteur est strictement
+supérieur au montant demandé ; en cas de solde insuffisant, l'opération est refusée.
 
 ## Authentification et session
 

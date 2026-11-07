@@ -29,6 +29,24 @@ class CaisseModel extends Model
   {
     $data['created_at'] = date('Y-m-d H:i:s');
     $data['montant'] = floatval($data['montant'] ?? 0);
+    if (($data['type'] ?? '') === 'sortie') {
+      if (!(($data['created_by_id'] ?? null) instanceof ObjectIdBson)) {
+        throw new \DomainException('Impossible de vérifier le solde de l’utilisateur.');
+      }
+
+      $balance = $this->getCreatorBalance(
+        (string) $data['created_by_id'],
+        $data['created_by'] ?? ''
+      );
+      if ($balance <= $data['montant']) {
+        throw new \DomainException(sprintf(
+          'Solde insuffisant. Solde actuel : %s ; montant demandé : %s.',
+          number_format($balance, 2, ',', ' '),
+          number_format($data['montant'], 2, ',', ' ')
+        ));
+      }
+    }
+
     $res = $this->collection->insertOne($data);
     try {
       if (($data['created_by_id'] ?? null) instanceof ObjectIdBson) {
@@ -270,6 +288,37 @@ class CaisseModel extends Model
   public function countFiltered($filters = [])
   {
     return $this->collection->countDocuments($this->buildQuery($filters));
+  }
+
+  private function getCreatorBalance($creatorId, $creatorUsername): float
+  {
+    $creatorQuery = $this->buildCreatorQuery([
+      'creator_id' => $creatorId,
+      'creator_username' => $creatorUsername
+    ]);
+    if (!$creatorQuery) {
+      throw new \DomainException('Impossible de vérifier le solde de l’utilisateur.');
+    }
+
+    $pipeline = [
+      ['$match' => $creatorQuery],
+      [
+        '$group' => [
+          '_id' => null,
+          'balance' => [
+            '$sum' => [
+              '$cond' => [
+                ['$eq' => ['$type', 'entree']],
+                ['$ifNull' => ['$montant', 0]],
+                ['$multiply' => [['$ifNull' => ['$montant', 0]], -1]]
+              ]
+            ]
+          ]
+        ]
+      ]
+    ];
+    $result = $this->collection->aggregate($pipeline)->toArray();
+    return (float) ($result[0]['balance'] ?? 0);
   }
 
   public function getOperationTotals($filters = []): array
